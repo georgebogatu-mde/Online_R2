@@ -1,0 +1,1889 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculator Alegere Cutii</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue:    #2563eb;
+      --blue-lt: #dbeafe;
+      --green:   #16a34a;
+      --green-lt:#dcfce7;
+      --red:     #dc2626;
+      --red-lt:  #fee2e2;
+      --amber:   #d97706;
+      --amber-lt:#fef3c7;
+      --gray-50: #f8fafc;
+      --gray-100:#f1f5f9;
+      --gray-200:#e2e8f0;
+      --gray-400:#94a3b8;
+      --gray-600:#475569;
+      --gray-700:#334155;
+      --gray-900:#0f172a;
+      --radius:  8px;
+      --shadow:  0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-900);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--blue);
+      color: #fff;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 2px 8px rgba(37,99,235,.4);
+    }
+    header .logo {
+      width: 40px; height: 40px;
+      background: rgba(255,255,255,.2);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+    header h1 { font-size: 18px; font-weight: 700; letter-spacing: -.3px; }
+    header p  { font-size: 12px; opacity: .8; }
+
+    /* ── TABS ── */
+    .tabs {
+      display: flex;
+      gap: 2px;
+      padding: 16px 24px 0;
+      background: #fff;
+      border-bottom: 1px solid var(--gray-200);
+    }
+    .tab-btn {
+      padding: 10px 20px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--gray-600);
+      border-bottom: 2px solid transparent;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .tab-btn:hover { color: var(--blue); }
+    .tab-btn.active {
+      color: var(--blue);
+      border-bottom-color: var(--blue);
+    }
+
+    /* ── MAIN CONTENT ── */
+    main { max-width: 1600px; margin: 0 auto; padding: 24px; }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ── CARD ── */
+    .card {
+      background: #fff;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--gray-200);
+      margin-bottom: 20px;
+    }
+    .card-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--gray-200);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card-header h2 { font-size: 15px; font-weight: 600; }
+    .card-header .icon {
+      width: 32px; height: 32px;
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+    .card-header .icon.blue  { background: var(--blue-lt); }
+    .card-header .icon.green { background: var(--green-lt); }
+    .card-header .icon.amber { background: var(--amber-lt); }
+    .card-body { padding: 20px; }
+
+    /* ── FORM GRID ── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .form-grid.narrow { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+
+    .field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--gray-600);
+      margin-bottom: 5px;
+    }
+    .field label .unit {
+      color: var(--gray-400);
+      font-weight: 400;
+    }
+    .field input, .field select {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      font-size: 14px;
+      background: #fff;
+      transition: border-color .15s, box-shadow .15s;
+      outline: none;
+    }
+    .field input:focus, .field select:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px var(--blue-lt);
+    }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 18px;
+      border-radius: var(--radius);
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all .15s;
+    }
+    .btn-primary {
+      background: var(--blue);
+      color: #fff;
+    }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-outline {
+      background: #fff;
+      color: var(--blue);
+      border: 1px solid var(--blue);
+    }
+    .btn-outline:hover { background: var(--blue-lt); }
+    .btn-sm { padding: 6px 12px; font-size: 13px; }
+
+    /* ── RESULTS GRID ── */
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .result-item {
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+    }
+    .result-item .label { font-size: 11px; color: var(--gray-600); margin-bottom: 4px; }
+    .result-item .value { font-size: 20px; font-weight: 700; color: var(--blue); }
+    .result-item .unit  { font-size: 12px; color: var(--gray-400); }
+
+    /* ── TABLE ── */
+    .table-wrap { overflow-x: auto; margin-top: 6px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th {
+      background: var(--gray-100);
+      padding: 9px 12px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--gray-600);
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      border-bottom: 1px solid var(--gray-200);
+      white-space: nowrap;
+    }
+    td {
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--gray-100);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--gray-50); }
+
+    /* ── BADGES ── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-green  { background: var(--green-lt); color: var(--green); }
+    .badge-red    { background: var(--red-lt);   color: var(--red); }
+    .badge-amber  { background: var(--amber-lt); color: var(--amber); }
+    .badge-blue   { background: var(--blue-lt);  color: var(--blue); }
+    .badge-gray   { background: var(--gray-100); color: var(--gray-600); }
+
+    /* ── RECOMMENDED ROW ── */
+    tr.recommended td { background: #f0fdf4 !important; }
+    tr.recommended td:first-child {
+      border-left: 3px solid var(--green);
+    }
+
+    /* ── INFO BOXES ── */
+    .info {
+      background: var(--blue-lt);
+      border: 1px solid #bfdbfe;
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      font-size: 13px;
+      color: #1e40af;
+      margin-bottom: 16px;
+    }
+    .info strong { font-weight: 600; }
+
+    /* ── DIVIDER ── */
+    .divider {
+      height: 1px;
+      background: var(--gray-200);
+      margin: 20px 0;
+    }
+
+    /* ── ORIENTATION TAG ── */
+    .orient-tag {
+      font-family: monospace;
+      font-size: 11px;
+      background: var(--gray-100);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--gray-700);
+    }
+
+    /* ── PALLET VISUAL ── */
+    .pallet-visual {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .pallet-card {
+      border: 2px solid var(--gray-200);
+      border-radius: var(--radius);
+      padding: 16px;
+      min-width: 220px;
+      flex: 1;
+    }
+    .pallet-card.recommended { border-color: var(--green); background: #f0fdf4; }
+    .pallet-card h3 { font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+    .pallet-stat { font-size: 12px; color: var(--gray-600); margin: 4px 0; }
+    .pallet-stat span { font-weight: 600; color: var(--gray-900); }
+
+    /* ── SELECTED BOX ── */
+    .selected-box-info {
+      background: var(--green-lt);
+      border: 1px solid #86efac;
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #166534;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .selected-box-info.visible { display: block; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 640px) {
+      main { padding: 12px; }
+      .tabs { overflow-x: auto; padding: 12px 12px 0; }
+      .form-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* ── TOOLTIP ── */
+    [title] { cursor: help; }
+
+    /* ── SECTION TITLE ── */
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--gray-700);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--gray-200);
+    }
+
+    /* Number box count pill */
+    .count-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--blue);
+      color: #fff;
+      border-radius: 20px;
+      padding: 1px 7px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">📦</div>
+  <div style="flex:1">
+    <h1>Calculator Alegere Cutii</h1>
+    <p>Calculator ambalare role și paletizare</p>
+  </div>
+  <button onclick="showHelp()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.25)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">❓ Ajutor</button>
+</header>
+
+<!-- Modal Help -->
+<div id="help-overlay" onclick="if(event.target===this)closeHelp()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;overflow-y:auto;padding:32px 16px">
+  <div style="background:#fff;border-radius:12px;max-width:780px;margin:0 auto;padding:32px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+    <button onclick="closeHelp()" style="position:absolute;top:16px;right:16px;background:var(--gray-100);border:none;border-radius:6px;width:32px;height:32px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;color:var(--gray-600)">×</button>
+    <h2 style="font-size:20px;font-weight:700;color:var(--gray-900);margin-bottom:4px">📖 Ghid de utilizare</h2>
+    <p style="color:var(--gray-600);font-size:13px;margin-bottom:24px">Calculator ambalare role și piese individuale — 5 taburi, parcurgeți pașii în ordine</p>
+
+    <div style="display:flex;flex-direction:column;gap:18px">
+
+      <!-- Tab 1 -->
+      <div style="border-left:4px solid var(--blue);padding-left:16px">
+        <div style="font-weight:700;font-size:14px;color:var(--blue);margin-bottom:6px">🎞️ Tab 1 — Calculator Rolă</div>
+        <p style="color:var(--gray-700);font-size:13px;line-height:1.7;margin:0">
+          Introduceți parametrii fizici: <strong>diametrul exterior</strong>, <strong>diametrul core-ului</strong>, <strong>grosimea materialului</strong> și corecția de grosime (%).<br>
+          Completați <strong>avansul</strong> (lungimea unui produs) și <strong>nr. piese per avans</strong>, apoi apăsați <em>Calculează</em>.<br>
+          Lungimea rolei se calculează automat prin formula spiralei Arhimede. Rezultatele afișate: grosime corectată, nr. spire, fracție spiră, <strong>lungime rolă calculată</strong> și <strong>nr. total de piese</strong>.<br>
+          <span style="color:var(--gray-500);font-size:12px">▸ Secțiunea B: calcul invers — introduceți nr. de piese dorit și obțineți diametrul necesar.</span>
+        </p>
+      </div>
+
+      <!-- Tab 2 -->
+      <div style="border-left:4px solid var(--green);padding-left:16px">
+        <div style="font-weight:700;font-size:14px;color:var(--green);margin-bottom:6px">📦 Tab 2 — Alegerea Cutiilor (role)</div>
+        <p style="color:var(--gray-700);font-size:13px;line-height:1.7;margin:0">
+          Introduceți <strong>diametrul</strong> și <strong>lățimea rolei</strong> (sau folosiți <em>← Preia diametrul din Tab 1</em>).<br>
+          Setați <strong>toleranța maximă</strong> (implicit 101 mm) — spațiul liber maxim admis pe fiecare axă a cutiei.<br>
+          Calculatorul testează toate 3 orientațiile posibile ale rolei în fiecare cutie și afișează: cod cutie, orientare, nr. role, schiță vizuală (vedere sus + față) și spațiu liber per axă.<br>
+          Cutiile <span style="background:var(--green-lt);color:var(--green);padding:1px 6px;border-radius:4px;font-weight:600;font-size:12px">✓ Se recomandă</span> respectă toleranța pe toate axele. Apăsați <strong>→ Palet</strong> pentru a trimite cutia la Tab 4.
+        </p>
+      </div>
+
+      <!-- Tab 3 -->
+      <div style="border-left:4px solid #7c3aed;padding-left:16px">
+        <div style="font-weight:700;font-size:14px;color:#7c3aed;margin-bottom:6px">📐 Tab 3 — Piese Individuale</div>
+        <p style="color:var(--gray-700);font-size:13px;line-height:1.7;margin:0">
+          Introduceți gabaritul piesei (L × l × h în mm) și alegeți modul de ambalare:
+        </p>
+        <div style="margin-top:8px;display:flex;flex-direction:column;gap:8px">
+          <div style="background:#f5f3ff;border-radius:6px;padding:10px 12px">
+            <strong style="color:#7c3aed;font-size:13px">📦 Ordonat (sistematic)</strong>
+            <p style="color:var(--gray-700);font-size:12px;line-height:1.6;margin:4px 0 0">
+              Calculează exact câte piese încap prin testarea tuturor celor 6 orientații ale bounding-box-ului (L×l×h, L×h×l etc.) în fiecare cutie disponibilă. Afișează: cod cutie, orientare, nr. piese, schiță (Sus + Față) și spațiu liber pe fiecare axă. Recomandat dacă toate spațiile libere &lt; toleranță.
+            </p>
+          </div>
+          <div style="background:var(--amber-lt);border-radius:6px;padding:10px 12px">
+            <strong style="color:var(--amber);font-size:13px">🎲 Vrac (dezordonat)</strong>
+            <p style="color:var(--gray-700);font-size:12px;line-height:1.6;margin:4px 0 0">
+              Estimare statistică bazată pe volumul piesei și <strong>factorul de umplere</strong> (25–85%). Valori orientative: 50–65% pentru piese complexe/neregulate, 65–80% pentru piese paralelipipedice. Rezultatul afișat include procentul de volum utilizat și o bară de umplere vizuală.
+            </p>
+          </div>
+        </div>
+        <p style="color:var(--gray-700);font-size:12px;margin:8px 0 0">Ambele moduri au butonul <strong>→ Palet</strong> pentru cutiile recomandate.</p>
+      </div>
+
+      <!-- Tab 4 -->
+      <div style="border-left:4px solid var(--amber);padding-left:16px">
+        <div style="font-weight:700;font-size:14px;color:var(--amber);margin-bottom:6px">🏭 Tab 4 — Așezarea pe Paleți</div>
+        <p style="color:var(--gray-700);font-size:13px;line-height:1.7;margin:0">
+          Se completează automat via butonul <em>→ Palet</em> din Tab 2 sau Tab 3, sau introduceți manual dimensiunile cutiei.<br>
+          Configurați parametrii paletului (implicit <strong>Europalet 1200×800 mm</strong>, înălțime max. <strong>1600 mm</strong>) și toleranța (implicit 301 mm).<br>
+          Rezultatele arată toate cele 6 orientații ale cutiei pe palet, cu <strong>schiță vedere de sus</strong> (footprint, galben) și <strong>vedere din față</strong> (niveluri, albastru), numărul total de cutii/palet și spațiu liber per axă.
+        </p>
+      </div>
+
+      <!-- Tab 5 -->
+      <div style="border-left:4px solid var(--gray-400);padding-left:16px">
+        <div style="font-weight:700;font-size:14px;color:var(--gray-600);margin-bottom:6px">⚙️ Tab 5 — Gestionare Cutii</div>
+        <p style="color:var(--gray-700);font-size:13px;line-height:1.7;margin:0">
+          Vizualizați baza de date cu toate cutiile, inclusiv <strong>codul articolului</strong> din sistemul ERP. Puteți edita sau șterge orice cutie, sau adăuga cutii noi (cu cod, dimensiuni, tip carton, greutate, preț).<br>
+          <span style="color:var(--red);font-size:12px">⚠ Modificările nu sunt salvate permanent — la reîncărcarea paginii se revine la lista inițială.</span>
+        </p>
+      </div>
+
+      <!-- Flux recomandat -->
+      <div style="background:var(--blue-lt);border-radius:8px;padding:14px 16px">
+        <div style="font-weight:600;font-size:13px;color:var(--blue);margin-bottom:8px">💡 Fluxuri de lucru recomandate</div>
+        <div style="font-size:12px;color:var(--gray-700);line-height:2">
+          <div><strong>Role:</strong> &nbsp;Tab 1 — calculați piese din rolă &nbsp;▸&nbsp; Tab 2 — alegeți cutia &nbsp;▸&nbsp; Tab 4 — calculați paleți</div>
+          <div><strong>Piese ordonate:</strong> &nbsp;Tab 3 (Ordonat) — introduceți gabaritul &nbsp;▸&nbsp; Tab 4 — calculați paleți</div>
+          <div><strong>Piese vrac:</strong> &nbsp;Tab 3 (Vrac) — setați factorul de umplere &nbsp;▸&nbsp; Tab 4 — calculați paleți</div>
+        </div>
+      </div>
+
+      <!-- Navigare -->
+      <div style="background:var(--gray-50);border-radius:8px;padding:12px 16px;border:1px solid var(--gray-200)">
+        <div style="font-weight:600;font-size:12px;color:var(--gray-600);margin-bottom:4px">⌨️ Navigare rapidă</div>
+        <p style="font-size:12px;color:var(--gray-600);margin:0;line-height:1.6">
+          Folosiți butoanele <strong>← Înapoi</strong> / <strong>Înainte →</strong> din bara de jos pentru a trece între taburi în ordine logică. Indicatoarele puncte arată progresul (albastru = activ, verde = vizitat).
+          Apăsați <strong>Esc</strong> pentru a închide această fereastră.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab('rola')">🎞️ Calculator Rolă</button>
+  <button class="tab-btn" onclick="showTab('cutii')">📦 Alegerea Cutiilor</button>
+  <button class="tab-btn" onclick="showTab('piese')">📐 Piese Individuale</button>
+  <button class="tab-btn" onclick="showTab('paleti')">🏭 Așezarea pe Paleți</button>
+  <button class="tab-btn" onclick="showTab('gestiune')">⚙️ Gestionare Cutii</button>
+</div>
+
+<main>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- TAB 1: CALCULATOR ROLĂ                                      -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="tab-rola" class="tab-content active">
+
+  <!-- Secțiunea A: Lungime și Piese din Diametru -->
+  <div class="card">
+    <div class="card-header">
+      <div class="icon blue">📏</div>
+      <div>
+        <h2>Calculul lungimii și numărului de piese / rolă</h2>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="form-grid narrow">
+        <div class="field">
+          <label>Diametru Core <span class="unit">[mm]</span></label>
+          <input type="number" id="r_core" value="86" step="0.1" min="1">
+        </div>
+        <div class="field">
+          <label>Grosime material <span class="unit">[mm]</span></label>
+          <input type="number" id="r_thick" value="0.16" step="0.001" min="0.001">
+        </div>
+        <div class="field">
+          <label>Corecție grosime <span class="unit">[%]</span></label>
+          <input type="number" id="r_corr" value="0" step="0.1">
+        </div>
+        <div class="field">
+          <label>Diametru rolă <span class="unit">[mm]</span></label>
+          <input type="number" id="r_diam" value="193.4" step="0.1" min="1">
+        </div>
+        <div class="field">
+          <label>Avans <span class="unit">[mm]</span></label>
+          <input type="number" id="r_avans" value="75" step="0.1" min="0.1">
+        </div>
+        <div class="field">
+          <label>Nr. piese / Avans</label>
+          <input type="number" id="r_ppa" value="1" step="1" min="1">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="calcRola()">▶ Calculează</button>
+
+      <div class="results-grid" id="rola-results" style="display:none">
+        <div class="result-item">
+          <div class="label">Grosime corectată</div>
+          <div class="value" id="res-thick">—</div>
+          <div class="unit">mm</div>
+        </div>
+        <div class="result-item">
+          <div class="label">Nr. spire</div>
+          <div class="value" id="res-spire">—</div>
+          <div class="unit">spire</div>
+        </div>
+        <div class="result-item">
+          <div class="label">Fracție ultima spiră</div>
+          <div class="value" id="res-frac">—</div>
+          <div class="unit">—</div>
+        </div>
+        <div class="result-item">
+          <div class="label">Lungime rolă calculată</div>
+          <div class="value" id="res-lung" style="color:var(--blue)">—</div>
+          <div class="unit">m</div>
+        </div>
+        <div class="result-item">
+          <div class="label">Lungime totală</div>
+          <div class="value" id="res-ltot">—</div>
+          <div class="unit">m</div>
+        </div>
+        <div class="result-item">
+          <div class="label">Nr. Piese / Rolă</div>
+          <div class="value" id="res-piese" style="color:var(--green)">—</div>
+          <div class="unit">piese</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Secțiunea B: Diametru din nr. piese -->
+  <div class="card">
+    <div class="card-header">
+      <div class="icon amber">🔄</div>
+      <div>
+        <h2>Calculul diametrului rolei din numărul de piese dorit</h2>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="form-grid narrow">
+        <div class="field">
+          <label>Diametru Core <span class="unit">[mm]</span></label>
+          <input type="number" id="d_core" value="86" step="0.1" min="1">
+        </div>
+        <div class="field">
+          <label>Grosime material <span class="unit">[mm]</span></label>
+          <input type="number" id="d_thick" value="0.16" step="0.001" min="0.001">
+        </div>
+        <div class="field">
+          <label>Corecție grosime <span class="unit">[%]</span></label>
+          <input type="number" id="d_corr" value="0" step="0.1">
+        </div>
+        <div class="field">
+          <label>Nr. Piese / Rolă dorit</label>
+          <input type="number" id="d_piese" value="2000" step="1" min="1">
+        </div>
+        <div class="field">
+          <label>Avans <span class="unit">[mm]</span></label>
+          <input type="number" id="d_avans" value="75" step="0.1" min="0.1">
+        </div>
+        <div class="field">
+          <label>Nr. piese / Avans</label>
+          <input type="number" id="d_ppa" value="1" step="1" min="1">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="calcDiam()">▶ Calculează diametrul</button>
+
+      <div class="results-grid" id="diam-results" style="display:none">
+        <div class="result-item">
+          <div class="label">Grosime corectată</div>
+          <div class="value" id="dres-thick">—</div>
+          <div class="unit">mm</div>
+        </div>
+        <div class="result-item">
+          <div class="label">Lungime rolă necesară</div>
+          <div class="value" id="dres-lung">—</div>
+          <div class="unit">m</div>
+        </div>
+        <div class="result-item">
+          <div class="label">Diametru rolă necesar</div>
+          <div class="value" id="dres-diam" style="color:var(--green)">—</div>
+          <div class="unit">mm</div>
+        </div>
+        <div class="result-item">
+          <div class="label">Nr. spire</div>
+          <div class="value" id="dres-spire">—</div>
+          <div class="unit">spire</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /tab-rola -->
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- TAB 2: ALEGEREA CUTIILOR                                     -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="tab-cutii" class="tab-content">
+
+  <div class="card">
+    <div class="card-header">
+      <div class="icon blue">📐</div>
+      <div>
+        <h2>Parametrii rolei de ambalat</h2>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="info">
+        <strong>Cum funcționează:</strong> Introduceți diametrul și lățimea rolei. Calculatorul verifică toate cele
+        3 orientații de așezare a rolei în cutie și identifică cutiile recomandate (spațiu liber &lt; toleranță pe fiecare axă).
+      </div>
+      <div class="form-grid narrow">
+        <div class="field">
+          <label>Diametru rolă <span class="unit">[mm]</span></label>
+          <input type="number" id="c_diam" value="600" step="1" min="1" oninput="calcCutii()">
+        </div>
+        <div class="field">
+          <label>Lățime rolă <span class="unit">[mm]</span></label>
+          <input type="number" id="c_lat" value="700" step="1" min="1" oninput="calcCutii()">
+        </div>
+        <div class="field">
+          <label>Toleranță maximă <span class="unit">[mm]</span></label>
+          <input type="number" id="c_tol" value="101" step="1" min="0" oninput="calcCutii()">
+        </div>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:4px;">
+        <button class="btn btn-primary" onclick="calcCutii()">🔍 Caută cutii potrivite</button>
+        <button class="btn btn-outline btn-sm" onclick="transferToCutii()">← Preia diametrul din Tab 1</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabel rezultate -->
+  <div class="card" id="cutii-result-card" style="display:none">
+    <div class="card-header">
+      <div class="icon green">✅</div>
+      <div>
+        <h2>Rezultate – Cutii disponibile <span class="count-pill" id="recCount">0</span> recomandate</h2>
+      </div>
+    </div>
+    <div class="card-body" style="padding:0">
+      <div class="table-wrap">
+        <table id="cutii-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Denumire cutie</th>
+              <th>Cod Cutie</th>
+              <th>Dimensiuni (L×l×H) [mm]</th>
+              <th>Orientare rolă</th>
+              <th>Role/cutie<br><small style="font-weight:400;color:var(--gray-400)">(niv/H × rol/niv)</small></th>
+              <th>Schiță aranjare</th>
+              <th>Spațiu liber (L / l / H) [mm]</th>
+              <th>Tip carton</th>
+              <th>Greutate [kg]</th>
+              <th>Preț [RON]</th>
+              <th>Stare</th>
+              <th>Acțiune</th>
+            </tr>
+          </thead>
+          <tbody id="cutii-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /tab-cutii -->
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- TAB 3: PIESE INDIVIDUALE                                     -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="tab-piese" class="tab-content">
+
+  <div class="card">
+    <div class="card-header">
+      <div class="icon blue">📐</div>
+      <div>
+        <h2>Parametrii piesei individuale</h2>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="info">
+        <strong>Cum funcționează:</strong> Introduceți gabaritul piesei și selectați modul de ambalare.
+        <em>Ordonat</em>: piesele se așează sistematic, calculul exact pe baza bounding-box-ului L×l×h.
+        <em>Vrac</em>: estimare statistică bazată pe volumul piesei și factorul de umplere selectat.
+      </div>
+
+      <div class="section-title">Gabarit piesă</div>
+      <div class="form-grid narrow">
+        <div class="field">
+          <label>Lungime L <span class="unit">[mm]</span></label>
+          <input type="number" id="pi_L" value="100" step="1" min="1">
+        </div>
+        <div class="field">
+          <label>Lățime l <span class="unit">[mm]</span></label>
+          <input type="number" id="pi_l" value="80" step="1" min="1">
+        </div>
+        <div class="field">
+          <label>Înălțime h <span class="unit">[mm]</span></label>
+          <input type="number" id="pi_h" value="50" step="1" min="1">
+        </div>
+        <div class="field">
+          <label>Toleranță <span class="unit">[mm]</span></label>
+          <input type="number" id="pi_tol" value="101" step="1" min="0">
+        </div>
+      </div>
+
+      <div class="section-title" style="margin-top:18px">Mod de ambalare</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px" id="piese-mode-btns">
+        <label id="lbl-ordonat" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 18px;border:2px solid var(--blue);border-radius:8px;background:var(--blue-lt);font-weight:600;color:var(--blue);transition:all .15s">
+          <input type="radio" name="pi_mode" value="ordonat" checked onchange="togglePieseMode()" style="accent-color:var(--blue)">
+          📦 Ordonat (sistematic)
+        </label>
+        <label id="lbl-vrac" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 18px;border:2px solid var(--gray-200);border-radius:8px;font-weight:500;color:var(--gray-700);transition:all .15s">
+          <input type="radio" name="pi_mode" value="vrac" onchange="togglePieseMode()" style="accent-color:var(--amber)">
+          🎲 Vrac (dezordonat)
+        </label>
+      </div>
+
+      <div id="vrac-params" style="display:none;margin-bottom:16px;padding:14px 16px;background:var(--amber-lt);border-radius:8px;border:1px solid #fde68a">
+        <div class="field" style="max-width:420px">
+          <label style="color:var(--amber)">Factor de umplere &nbsp;<strong id="pi_factor_val">60%</strong></label>
+          <input type="range" id="pi_factor" min="25" max="85" value="60" step="5"
+            oninput="document.getElementById('pi_factor_val').textContent = this.value + '%'"
+            style="width:100%;margin-top:6px;accent-color:var(--amber)">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray-600);margin-top:4px">
+            <span>25% — piese neregulate, bulky</span>
+            <span>85% — piese cubice regulate</span>
+          </div>
+          <div style="font-size:12px;color:var(--gray-600);margin-top:8px">
+            💡 Valoare tipică: <strong>50–65%</strong> pentru piese cu formă complexă, <strong>65–80%</strong> pentru piese aproximativ paralelipipedice.
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="calcPiese()">🔍 Caută cutii potrivite</button>
+    </div>
+  </div>
+
+  <!-- Tabel rezultate -->
+  <div class="card" id="piese-result-card" style="display:none">
+    <div class="card-header">
+      <div class="icon green">✅</div>
+      <div>
+        <h2>Rezultate – Cutii disponibile &nbsp;<span class="count-pill" id="pieseRecCount">0</span> recomandate</h2>
+      </div>
+    </div>
+    <div class="card-body" style="padding:0">
+      <div class="table-wrap">
+        <table id="piese-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Denumire cutie</th>
+              <th>Cod Cutie</th>
+              <th>Dim. cutie (L×l×H) [mm]</th>
+              <th>Orientare / Mod</th>
+              <th>Piese/cutie<br><small style="font-weight:400;color:var(--gray-400)">(niv/H × p/niv)</small></th>
+              <th>Schiță / Umplere</th>
+              <th>Spațiu liber / Vol. util</th>
+              <th>Tip carton</th>
+              <th>Stare</th>
+              <th>Acțiune</th>
+            </tr>
+          </thead>
+          <tbody id="piese-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /tab-piese -->
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- TAB 4: AȘEZAREA PE PALEȚI                                    -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="tab-paleti" class="tab-content">
+
+  <div class="card">
+    <div class="card-header">
+      <div class="icon amber">🏭</div>
+      <div>
+        <h2>Parametrii cutiei și paletului</h2>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="selected-box-info" id="sel-box-info"></div>
+
+      <div class="section-title">Dimensiuni cutie de ambalat</div>
+      <div class="form-grid narrow">
+        <div class="field">
+          <label>Lungime cutie <span class="unit">[mm]</span></label>
+          <input type="number" id="p_bl" value="800" step="1" min="1">
+        </div>
+        <div class="field">
+          <label>Lățime cutie <span class="unit">[mm]</span></label>
+          <input type="number" id="p_bl2" value="600" step="1" min="1">
+        </div>
+        <div class="field">
+          <label>Înălțime cutie <span class="unit">[mm]</span></label>
+          <input type="number" id="p_bh" value="600" step="1" min="1">
+        </div>
+      </div>
+
+      <div class="section-title">Parametrii palet</div>
+      <div class="form-grid narrow">
+        <div class="field">
+          <label>Lungime palet <span class="unit">[mm]</span></label>
+          <input type="number" id="p_pl" value="1200" step="1" min="1">
+        </div>
+        <div class="field">
+          <label>Lățime palet <span class="unit">[mm]</span></label>
+          <input type="number" id="p_pl2" value="800" step="1" min="1">
+        </div>
+        <div class="field">
+          <label>Înălțime max. stivă <span class="unit">[mm]</span></label>
+          <input type="number" id="p_ph" value="1600" step="1" min="1">
+        </div>
+        <div class="field">
+          <label>Toleranță palet <span class="unit">[mm]</span></label>
+          <input type="number" id="p_tol" value="301" step="1" min="0">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="calcPaleti()">▶ Calculează paletizarea</button>
+    </div>
+  </div>
+
+  <!-- Rezultate paleți -->
+  <div class="card" id="palet-result-card" style="display:none">
+    <div class="card-header">
+      <div class="icon green">📊</div>
+      <div>
+        <h2>Orientări de așezare pe palet &nbsp;<span class="count-pill" id="palRec">0</span> recomandate</h2>
+      </div>
+    </div>
+    <div class="card-body" style="padding:0">
+      <div class="table-wrap">
+        <table id="paleti-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Orientare cutie<br><small style="font-weight:400;color:var(--gray-400)">(L × l × H)</small></th>
+              <th>Cutii / Palet<br><small style="font-weight:400;color:var(--gray-400)">(niv. × cutii/niv.)</small></th>
+              <th>Schiță așezare</th>
+              <th>Spațiu liber (L / l / H) [mm]</th>
+              <th>Stare</th>
+            </tr>
+          </thead>
+          <tbody id="paleti-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /tab-paleti -->
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- TAB 4: GESTIONARE CUTII                                      -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="tab-gestiune" class="tab-content">
+
+  <!-- Formular adăugare / editare -->
+  <div class="card">
+    <div class="card-header">
+      <div class="icon blue">✏️</div>
+      <div><h2 id="g-form-title">Adaugă cutie nouă</h2></div>
+    </div>
+    <div class="card-body">
+      <input type="hidden" id="g_id">
+      <div class="form-grid narrow">
+        <div class="field" style="grid-column: span 2">
+          <label>Denumire cutie</label>
+          <input type="text" id="g_name" placeholder="Ex: Cutia Mare" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Cod Cutie</label>
+          <input type="text" id="g_cod" placeholder="ex: 00002427" autocomplete="off" style="font-family:monospace">
+        </div>
+        <div class="field">
+          <label>Lungime L <span class="unit">[mm]</span></label>
+          <input type="number" id="g_L" min="1" step="1" placeholder="ex: 400">
+        </div>
+        <div class="field">
+          <label>Lățime l <span class="unit">[mm]</span></label>
+          <input type="number" id="g_l" min="1" step="1" placeholder="ex: 300">
+        </div>
+        <div class="field">
+          <label>Înălțime H <span class="unit">[mm]</span></label>
+          <input type="number" id="g_H" min="1" step="1" placeholder="ex: 200">
+        </div>
+        <div class="field">
+          <label>Tip carton</label>
+          <select id="g_tip">
+            <option value="CO3">CO3</option>
+            <option value="CO5" selected>CO5</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Calitate carton</label>
+          <select id="g_cal">
+            <option value="T2F">T2F</option>
+            <option value="T3FT" selected>T3FT</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Greutate <span class="unit">[kg]</span></label>
+          <input type="number" id="g_gr" min="0" step="0.01" placeholder="opțional">
+        </div>
+        <div class="field">
+          <label>Preț <span class="unit">[RON]</span></label>
+          <input type="number" id="g_pret" min="0" step="0.01" placeholder="opțional">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-primary" onclick="saveBox()">💾 Salvează cutia</button>
+        <button class="btn btn-outline" onclick="newBox()">➕ Cutie nouă</button>
+        <span id="g-msg" style="font-size:13px;color:var(--green);font-weight:500;display:none"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabel cutii -->
+  <div class="card">
+    <div class="card-header">
+      <div class="icon green">📋</div>
+      <div>
+        <h2>Lista cutiilor &nbsp;<span class="count-pill" id="box-count">0</span></h2>
+      </div>
+    </div>
+    <div class="card-body" style="padding:0">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Denumire</th>
+              <th>Cod Cutie</th>
+              <th>L [mm]</th>
+              <th>l [mm]</th>
+              <th>H [mm]</th>
+              <th>Tip</th>
+              <th>Calitate</th>
+              <th>Greutate [kg]</th>
+              <th>Preț [RON]</th>
+              <th>Acțiuni</th>
+            </tr>
+          </thead>
+          <tbody id="gestiune-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /tab-gestiune -->
+
+
+</main>
+
+<!-- Bara de navigare centrală -->
+<nav id="nav-bar" style="position:sticky;bottom:0;z-index:100;background:#fff;border-top:1px solid var(--gray-200);padding:10px 24px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 -2px 8px rgba(0,0,0,.06)">
+  <button id="nav-prev" onclick="navStep(-1)" style="display:flex;align-items:center;gap:8px;padding:9px 20px;border:1px solid var(--gray-200);background:var(--gray-50);border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--gray-700);transition:all .15s" onmouseover="this.style.background='var(--gray-100)'" onmouseout="this.style.background='var(--gray-50)'">
+    ← Înapoi
+  </button>
+  <div id="nav-steps" style="display:flex;align-items:center;gap:6px"></div>
+  <button id="nav-next" onclick="navStep(1)" style="display:flex;align-items:center;gap:8px;padding:9px 20px;background:var(--blue);border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:#fff;transition:all .15s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+    Înainte →
+  </button>
+</nav>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ─── SUPABASE SYNC ────────────────────────────────────────────────────────────
+var _SB_URL='https://kdogtxfrnbclvgqkrnbk.supabase.co';
+var _SB_KEY='sb_publishable_GFKw1HsOGs8HKcCSGR2EgA_tajstNvO';
+var _sb2=null;
+var BOXES_KEY='calc_cutii_boxes_v1';
+function _getSb(){if(!_sb2&&window.supabase)_sb2=window.supabase.createClient(_SB_URL,_SB_KEY);return _sb2;}
+async function sbLoadShared(key){try{var sb=_getSb();if(!sb)return null;var {data}=await sb.from('shared_data').select('value').eq('key',key).maybeSingle();return data?.value??null;}catch{return null;}}
+async function sbSaveShared(key,value){try{var sb=_getSb();if(!sb)return;var r=await _getSb().auth.getSession();var uid=r?.data?.session?.user?.id||null;await sb.from('shared_data').upsert({key,value,updated_at:new Date().toISOString(),updated_by:uid},{onConflict:'key'});}catch{}}
+function saveBoxesToSupabase(){sbSaveShared(BOXES_KEY,BOXES);}
+// ─────────────────────────────────────────────────────────────────────────────
+</script>
+<script>
+// ═══════════════════════════════════════════════════════════
+// DATE CUTII (din fișierul Excel)
+// ═══════════════════════════════════════════════════════════
+let BOXES = [
+  { id:1,  cod:'00002427', name:'Mica',                                  L:150,  l:150, H:90,  tip:'CO3', cal:'T2F',  greutate:0.07, pret:0.78 },
+  { id:2,  cod:'00002428', name:'Taparo',                                L:250,  l:250, H:200, tip:'CO5', cal:'T3FT', greutate:0.34, pret:1.74 },
+  { id:3,  cod:'00002429', name:'Aviva',                                 L:350,  l:350, H:200, tip:'CO5', cal:'T3FT', greutate:0.50, pret:2.52 },
+  { id:4,  cod:'00002430', name:'Flexo',                                 L:540,  l:240, H:240, tip:'CO5', cal:'T3FT', greutate:0.30, pret:2.39 },
+  { id:5,  cod:'00002431', name:'Owens',                                 L:450,  l:370, H:161, tip:'CO5', cal:'T3FT', greutate:0.40, pret:2.65 },
+  { id:6,  cod:'00002432', name:'Mare',                                  L:350,  l:350, H:485, tip:'CO5', cal:'T3FT', greutate:0.80, pret:3.42 },
+  { id:7,  cod:'00002433', name:'ECAM',                                  L:650,  l:236, H:235, tip:'CO5', cal:'T3FT', greutate:0.58, pret:2.76 },
+  { id:8,  cod:'00002434', name:'TESA',                                  L:310,  l:240, H:75,  tip:'CO3', cal:'T2F',  greutate:0.15, pret:1.35 },
+  { id:9,  cod:'00002435', name:'DeLonghi',                              L:210,  l:210, H:350, tip:'CO5', cal:'T3FT', greutate:0.36, pret:1.89 },
+  { id:10, cod:'00002715', name:'Magna 1',                               L:415,  l:270, H:270, tip:'CO5', cal:'T3FT', greutate:0.56, pret:2.51 },
+  { id:11, cod:'00002716', name:'Magna 2',                               L:1250, l:230, H:230, tip:'CO5', cal:'T3FT', greutate:0.98, pret:4.15 },
+  { id:12, cod:'00002900', name:'Jumătate Taparo',                       L:250,  l:250, H:100, tip:'CO3', cal:'T2F',  greutate:0.16, pret:1.20 },
+  { id:13, cod:'00005154', name:'Cutie Carton 800×600×600 T3FT (Thinsulate)', L:800, l:600, H:600, tip:'CO5', cal:'T3FT', greutate:null, pret:null },
+  { id:14, cod:'00006399', name:'Cutie Carton 310×250×150 T3FT',         L:310,  l:250, H:150, tip:'CO5', cal:'T3FT', greutate:null, pret:null },
+  { id:15, cod:'00006400', name:'Cutie Carton 340×210×150 T3FT',         L:340,  l:210, H:150, tip:'CO5', cal:'T3FT', greutate:null, pret:null },
+  { id:16, cod:'00006401', name:'Cutie Carton 380×350×150 T3FT',         L:380,  l:350, H:150, tip:'CO5', cal:'T3FT', greutate:null, pret:null },
+  { id:17, cod:'00006402', name:'Cutie Carton 410×310×150 T3FT',         L:410,  l:310, H:150, tip:'CO5', cal:'T3FT', greutate:null, pret:null },
+  { id:18, cod:'00006403', name:'Cutie Carton 610×350×150 T3FT',         L:610,  l:350, H:150, tip:'CO5', cal:'T3FT', greutate:null, pret:null },
+  { id:19, cod:'00006404', name:'Cutie Carton 700×380×150 T3FT',         L:700,  l:380, H:150, tip:'CO5', cal:'T3FT', greutate:null, pret:null },
+  { id:20, cod:'00006405', name:'Cutie Carton 750×380×150 T3FT',         L:750,  l:380, H:150, tip:'CO5', cal:'T3FT', greutate:null, pret:null },
+  { id:21, cod:'00006406', name:'Cutie Carton 1200×410×150 T3FT',        L:1200, l:410, H:150, tip:'CO5', cal:'T3FT', greutate:null, pret:null },
+  { id:22, cod:'00006569', name:'Cutie Carton Galia C13 400×300×200',    L:400,  l:300, H:200, tip:'CO5', cal:'T3FT', greutate:null, pret:null },
+  { id:23, cod:'00005662', name:'Cutie Carton 424×284×130 T3FT',         L:424,  l:284, H:130, tip:'CO5', cal:'T3FT', greutate:null, pret:null },
+  { id:24, cod:'00004159', name:'Cutie Carton Micro 400×150×150',        L:400,  l:150, H:150, tip:'CO5', cal:'T3FT', greutate:null, pret:null },
+];
+
+// ═══════════════════════════════════════════════════════════
+// HELP MODAL
+// ═══════════════════════════════════════════════════════════
+function showHelp() {
+  document.getElementById('help-overlay').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+function closeHelp() {
+  document.getElementById('help-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeHelp(); });
+
+// ═══════════════════════════════════════════════════════════
+// NAVIGARE TABS
+// ═══════════════════════════════════════════════════════════
+const TAB_ORDER = ['rola', 'cutii', 'piese', 'paleti', 'gestiune'];
+const TAB_LABELS = {
+  rola:     '🎞️ Calculator Rolă',
+  cutii:    '📦 Alegerea Cutiilor',
+  piese:    '📐 Piese Individuale',
+  paleti:   '🏭 Așezarea pe Paleți',
+  gestiune: '⚙️ Gestionare Cutii',
+};
+let _activeTab = 'rola';
+
+function showTab(name, fromBtn) {
+  _activeTab = name;
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  const idx = TAB_ORDER.indexOf(name);
+  document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+  if (name === 'gestiune') renderBoxesTable();
+  updateNavBar();
+}
+
+function navStep(dir) {
+  const idx = TAB_ORDER.indexOf(_activeTab);
+  const next = idx + dir;
+  if (next < 0 || next >= TAB_ORDER.length) return;
+  showTab(TAB_ORDER[next]);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function updateNavBar() {
+  const idx = TAB_ORDER.indexOf(_activeTab);
+  const prev = document.getElementById('nav-prev');
+  const next = document.getElementById('nav-next');
+  const steps = document.getElementById('nav-steps');
+
+  // Buton înapoi
+  if (idx === 0) {
+    prev.style.visibility = 'hidden';
+  } else {
+    prev.style.visibility = 'visible';
+    prev.innerHTML = `← ${TAB_LABELS[TAB_ORDER[idx - 1]].replace(/^[^ ]+ /, '')}`;
+  }
+
+  // Buton înainte
+  if (idx === TAB_ORDER.length - 1) {
+    next.style.visibility = 'hidden';
+  } else {
+    next.style.visibility = 'visible';
+    next.innerHTML = `${TAB_LABELS[TAB_ORDER[idx + 1]].replace(/^[^ ]+ /, '')} →`;
+  }
+
+  // Indicatori puncte
+  steps.innerHTML = TAB_ORDER.map((t, i) => {
+    const active = i === idx;
+    const done   = i < idx;
+    const color  = active ? 'var(--blue)' : done ? 'var(--green)' : 'var(--gray-200)';
+    const size   = active ? '10px' : '8px';
+    const title  = TAB_LABELS[t].replace(/^[^ ]+ /, '');
+    return `<div title="${title}" style="width:${size};height:${size};border-radius:50%;background:${color};transition:all .2s"></div>`;
+  }).join('');
+}
+
+// Init nav la încărcare
+window.addEventListener('DOMContentLoaded', () => updateNavBar());
+
+// ═══════════════════════════════════════════════════════════
+// TAB 1 – CALCULATOR ROLĂ
+// ═══════════════════════════════════════════════════════════
+
+function calcRola() {
+  const core  = parseFloat(document.getElementById('r_core').value)  || 0;
+  const thick = parseFloat(document.getElementById('r_thick').value) || 0;
+  const corr  = parseFloat(document.getElementById('r_corr').value)  || 0;
+  const diam  = parseFloat(document.getElementById('r_diam').value)  || 0;
+  const avans = parseFloat(document.getElementById('r_avans').value) || 1;
+  const ppa   = parseFloat(document.getElementById('r_ppa').value)   || 1;
+
+  if (!core || !thick || !diam || !avans) {
+    alert('Completați toate câmpurile!'); return;
+  }
+
+  const t_cor   = thick * (1 + corr / 100);
+  const spire   = (diam - core) / (2 * t_cor);
+  const spire_t = Math.trunc(spire);
+  const frac    = spire - spire_t;
+  // Lungime spirală Arhimede pentru spire întregi
+  const lung    = spire_t * Math.PI * (core + spire_t * t_cor) / 1000;
+  // Adaugă fracția ultimei spire (formula Excel: ROUND((M*1000 + frac*π*D)/1000, 1))
+  const L_tot   = Math.round((lung * 1000 + frac * Math.PI * diam) / 1000 * 10) / 10;
+  const piese  = Math.trunc(L_tot * 1000 / avans) * ppa;
+
+  document.getElementById('res-thick').textContent  = t_cor.toFixed(4);
+  document.getElementById('res-spire').textContent  = spire.toFixed(3);
+  document.getElementById('res-frac').textContent   = frac.toFixed(4);
+  document.getElementById('res-lung').textContent   = lung.toFixed(2);
+  document.getElementById('res-ltot').textContent   = L_tot.toFixed(1);
+  document.getElementById('res-piese').textContent  = piese.toFixed(0);
+  document.getElementById('rola-results').style.display = 'grid';
+
+  // Actualizează diametrul în tab-ul cutii
+  document.getElementById('c_diam').value = diam.toFixed(1);
+}
+
+function calcDiam() {
+  const core  = parseFloat(document.getElementById('d_core').value)  || 0;
+  const thick = parseFloat(document.getElementById('d_thick').value) || 0;
+  const corr  = parseFloat(document.getElementById('d_corr').value)  || 0;
+  const piese = parseFloat(document.getElementById('d_piese').value) || 0;
+  const avans = parseFloat(document.getElementById('d_avans').value) || 1;
+  const ppa   = parseFloat(document.getElementById('d_ppa').value)   || 1;
+
+  if (!core || !thick || !piese || !avans) {
+    alert('Completați toate câmpurile!'); return;
+  }
+
+  const t_cor = thick * (1 + corr / 100);
+  // Lungimea totală necesară (m) = piese / ppa * avans / 1000
+  const L_nec = (piese / ppa) * avans / 1000;
+  // Numărul de spire = L_nec * 1000 / (PI * (D_avg))
+  // D_avg = core + n_spire * t_cor  →  D_rola = core + 2 * n_spire * t_cor
+  // n_spire = L_nec * 1000 / (PI * D_avg)  [implicit]
+  // Formul exactă din spirală Archimede:
+  // L = n * PI * (D_core + D_rola) / 2 / 1000
+  // => n = (D_rola - D_core) / (2 * t_cor)
+  // => L = PI * t_cor * n^2 + PI * D_core/2/1000 * n...
+  // Simplificat (approx): D_rola ≈ sqrt(D_core^2 + 4*L*t_cor*1000/PI)
+  const D_rola = Math.sqrt(core * core + 4 * L_nec * 1000 * t_cor / Math.PI);
+  const n_spire = (D_rola - core) / (2 * t_cor);
+
+  document.getElementById('dres-thick').textContent = t_cor.toFixed(4);
+  document.getElementById('dres-lung').textContent  = L_nec.toFixed(2);
+  document.getElementById('dres-diam').textContent  = D_rola.toFixed(1);
+  document.getElementById('dres-spire').textContent = n_spire.toFixed(1);
+  document.getElementById('diam-results').style.display = 'grid';
+}
+
+function transferToCutii() {
+  const diam = parseFloat(document.getElementById('r_diam').value) || 0;
+  if (diam > 0) {
+    document.getElementById('c_diam').value = diam;
+    alert('Diametrul ' + diam + ' mm a fost transferat în tab-ul "Alegerea Cutiilor".');
+  } else {
+    alert('Calculați mai întâi datele rolei în Tab 1.');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// SCHIȚĂ SVG – vedere sus (L×l) + vedere față (L×H)
+// ═══════════════════════════════════════════════════════════
+function generateSketch(box, result, D, W) {
+  const VW = 58, VH = 56, GAP = 6;
+  const totalW = VW * 2 + GAP + 4;
+  const totalH = VH + 14;
+  const f = n => (+n.toFixed(1));
+
+  // ── Detectare axă ─────────────────────────────────────────
+  // Rola este un cilindru: diametru D, lățime W.
+  // bounding box orientat: una din dimensiuni = W (axa rolei),
+  // celelalte două = D (diametrul).
+  // Cercul apare în vederea PERPENDICULARÃ pe axă (privind de-a lungul axei).
+  //   [W, D, D] → axa pe L → cerc vizibil din lateral (l×H)
+  //   [D, W, D] → axa pe l → cerc vizibil din față    (L×H)
+  //   [D, D, W] → axa pe H → cerc vizibil de sus      (L×l)
+  // Găsim care dimensiune este W: cea mai apropiată de W.
+  const dL = Math.abs(result.rL - W);
+  const dl = Math.abs(result.rl - W);
+  const dH = Math.abs(result.rH - W);
+  const minD = Math.min(dL, dl, dH);
+  const axisL = dL === minD && !(dl === minD);   // W este pe L
+  const axisl = dl === minD && !(dL === minD);   // W este pe l
+  const axisH = !axisL && !axisl;               // W este pe H (implicit)
+
+  // ── Funcție de desenare a unei vederi ─────────────────────
+  function drawView(offsetX, bW_mm, bH_mm, rW_mm, rH_mm, cntX, cntY, isCircle, label) {
+    if (!bW_mm || !bH_mm || !rW_mm || !rH_mm) return '';
+    const sc  = Math.min((VW - 6) / bW_mm, (VH - 6) / bH_mm);
+    const bW  = bW_mm * sc, bH = bH_mm * sc;
+    const ox  = offsetX + (VW - bW) / 2;
+    const oy  = 2 + (VH - bH) / 2;
+    const rW  = rW_mm * sc, rH = rH_mm * sc;
+
+    let s = `<rect x="${f(ox)}" y="${f(oy)}" width="${f(bW)}" height="${f(bH)}"
+      fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5" rx="1"/>`;
+
+    for (let i = 0; i < cntX && i < 8; i++) {
+      for (let j = 0; j < cntY && j < 8; j++) {
+        const x = ox + i * rW, y = oy + j * rH;
+        if (isCircle) {
+          // Vedere de-a lungul axei: secțiune circular
+          const r  = Math.min(rW, rH) * 0.43;
+          const cx = f(x + rW / 2), cy = f(y + rH / 2);
+          s += `<circle cx="${cx}" cy="${cy}" r="${f(r)}" fill="#fef9c3" stroke="#f59e0b" stroke-width="1.1"/>`;
+          s += `<circle cx="${cx}" cy="${cy}" r="${f(r * 0.22)}" fill="#d97706"/>`;
+        } else {
+          // Vedere laterală: dreptunghi (W × D sau D × W)
+          s += `<rect x="${f(x+0.5)}" y="${f(y+0.5)}" width="${f(rW-1)}" height="${f(rH-1)}"
+            rx="1" fill="#fef9c3" stroke="#f59e0b" stroke-width="1"/>`;
+          // Linie punctată indicând axa rolei
+          if (rW >= rH)
+            s += `<line x1="${f(x+3)}" y1="${f(y+rH/2)}" x2="${f(x+rW-3)}" y2="${f(y+rH/2)}"
+              stroke="#f59e0b" stroke-width="0.8" stroke-dasharray="3,2"/>`;
+          else
+            s += `<line x1="${f(x+rW/2)}" y1="${f(y+3)}" x2="${f(x+rW/2)}" y2="${f(y+rH-3)}"
+              stroke="#f59e0b" stroke-width="0.8" stroke-dasharray="3,2"/>`;
+        }
+      }
+    }
+    // Etichetă vedere
+    s += `<text x="${f(offsetX + VW/2)}" y="${f(totalH - 1)}"
+      text-anchor="middle" font-size="7" fill="#94a3b8" font-family="sans-serif">${label}</text>`;
+    return s;
+  }
+
+  // ── Alege vederile în funcție de axă ──────────────────────
+  // Vederea 1 (stânga): ÎNTOTDEAUNA cea care arată CERCURI
+  // Vederea 2 (dreapta): vedere complementară (profil / față / sus)
+  let v1svg, v2svg, div_x;
+
+  if (axisH) {
+    // Ax pe H → CERC de sus (L×l) + dreptunghi față (L×H)
+    v1svg = drawView(0,        box.L, box.l, result.rL, result.rl, result.nL, result.nl, true,  'Sus ⬤');
+    v2svg = drawView(VW + GAP, box.L, box.H, result.rL, result.rH, result.nL, result.nH, false, 'Față');
+  } else if (axisl) {
+    // Ax pe l → CERC din față (L×H) + dreptunghi sus (L×l)
+    v1svg = drawView(0,        box.L, box.H, result.rL, result.rH, result.nL, result.nH, true,  'Față ⬤');
+    v2svg = drawView(VW + GAP, box.L, box.l, result.rL, result.rl, result.nL, result.nl, false, 'Sus');
+  } else {
+    // Ax pe L → CERC din lateral (l×H) + dreptunghi față (L×H)
+    v1svg = drawView(0,        box.l, box.H, result.rl, result.rH, result.nl, result.nH, true,  'Lateral ⬤');
+    v2svg = drawView(VW + GAP, box.L, box.H, result.rL, result.rH, result.nL, result.nH, false, 'Față');
+  }
+
+  div_x = f(VW + GAP / 2 + 1);
+  return `<svg width="${totalW}" height="${totalH}" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 auto">
+    ${v1svg}${v2svg}
+    <line x1="${div_x}" y1="2" x2="${div_x}" y2="${VH + 2}" stroke="#e2e8f0" stroke-width="1"/>
+  </svg>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// TAB 2 – ALEGEREA CUTIILOR
+// ═══════════════════════════════════════════════════════════
+
+// Orientările unui cilindru (diametru D, lățime W):
+// bounding box are forma D×D×W → 3 rotații posibile în cutie
+const ORIENTATIONS = [
+  { label: 'W × D × D', dims: (D,W) => [W, D, D] },
+  { label: 'D × W × D', dims: (D,W) => [D, W, D] },
+  { label: 'D × D × W', dims: (D,W) => [D, D, W] },
+];
+
+function calcCutii() {
+  const D   = parseFloat(document.getElementById('c_diam').value) || 0;
+  const W   = parseFloat(document.getElementById('c_lat').value)  || 0;
+  const tol = parseFloat(document.getElementById('c_tol').value)  || 101;
+
+  if (!D || !W) return;
+
+  const tbody = document.getElementById('cutii-tbody');
+  tbody.innerHTML = '';
+  let recCount = 0;
+  const rows = [];
+
+  BOXES.forEach(box => {
+    let bestResult = null;
+    let bestRec = false;
+
+    ORIENTATIONS.forEach(orient => {
+      const [rL, rl, rH] = orient.dims(D, W);
+
+      // Câte role încap pe fiecare axă
+      const nL = Math.floor(box.L / rL);
+      const nl = Math.floor(box.l / rl);
+      const nH = Math.floor(box.H / rH);
+
+      if (nL < 1 || nl < 1 || nH < 1) return; // nu încape nicio rolă
+
+      const slackL = box.L - nL * rL;
+      const slackl = box.l - nl * rl;
+      const slackH = box.H - nH * rH;
+
+      const singleFit = (box.L >= rL && box.l >= rl && box.H >= rH);
+      const rec = singleFit && slackL < tol && slackl < tol && slackH < tol;
+      const total = nL * nl * nH;
+
+      // Prefer recommended, then most roles
+      if (!bestResult || (rec && !bestRec) || (!bestRec && total > (bestResult.total||0))) {
+        bestResult = { orient: orient.label, nL, nl, nH, slackL, slackl, slackH, rec, total, rL, rl, rH };
+        bestRec = rec;
+      }
+    });
+
+    if (bestResult) {
+      rows.push({ box, result: bestResult });
+      if (bestResult.rec) recCount++;
+    }
+  });
+
+  // Sortare: recomandate întâi, apoi după spațiu liber total
+  rows.sort((a, b) => {
+    if (a.result.rec && !b.result.rec) return -1;
+    if (!a.result.rec && b.result.rec)  return 1;
+    if (a.result.rec && b.result.rec) {
+      const wasteA = a.result.slackL + a.result.slackl + a.result.slackH;
+      const wasteB = b.result.slackL + b.result.slackl + b.result.slackH;
+      return wasteA - wasteB;
+    }
+    return a.box.id - b.box.id;
+  });
+
+  rows.forEach(({ box, result }) => {
+    const tr = document.createElement('tr');
+    if (result.rec) tr.classList.add('recommended');
+
+    const badge = result.rec
+      ? '<span class="badge badge-green">✓ Se recomandă</span>'
+      : '<span class="badge badge-gray">Nu se potrivește</span>';
+
+    const pret = box.pret != null ? box.pret.toFixed(2) + ' RON' : '—';
+    const gr   = box.greutate != null ? box.greutate.toFixed(2) + ' kg' : '—';
+
+    const sL = Math.round(result.slackL);
+    const sl = Math.round(result.slackl);
+    const sH = Math.round(result.slackH);
+    const slackStr = result.rec
+      ? `<span style="color:var(--green);font-weight:600">${sL} / ${sl} / ${sH}</span>`
+      : `${sL >= 9999 ? '✗' : sL} / ${sl >= 9999 ? '✗' : sl} / ${sH >= 9999 ? '✗' : sH}`;
+
+    const sketch = generateSketch(box, result, D, W);
+
+    const action = result.rec
+      ? `<button class="btn btn-outline btn-sm" onclick="selectBox(${box.id}, ${box.L}, ${box.l}, ${box.H}, '${box.name.replace(/'/g,"\\'")}')">→ Palet</button>`
+      : '';
+
+    tr.innerHTML = `
+      <td style="font-weight:600;color:var(--gray-600)">${box.id}</td>
+      <td style="font-weight:500">${box.name}</td>
+      <td style="text-align:center;font-family:monospace;font-size:12px;color:var(--gray-700)">${box.cod || '—'}</td>
+      <td><span class="orient-tag">${box.L}×${box.l}×${box.H}</span></td>
+      <td><span class="orient-tag">${result.orient}</span></td>
+      <td style="text-align:center;white-space:nowrap">
+        <div style="font-weight:700;font-size:15px;color:var(--blue)">${result.total}</div>
+        <div style="font-size:11px;color:var(--gray-600);margin-top:2px">${result.nH} niv. × ${result.nL * result.nl} rol/niv.</div>
+      </td>
+      <td style="padding:6px 8px">${sketch}</td>
+      <td>${slackStr}</td>
+      <td><span class="badge badge-blue">${box.tip}</span> ${box.cal}</td>
+      <td>${gr}</td>
+      <td>${pret}</td>
+      <td>${badge}</td>
+      <td>${action}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('recCount').textContent = recCount;
+  document.getElementById('cutii-result-card').style.display = 'block';
+}
+
+// ═══════════════════════════════════════════════════════════
+// TAB 3 – PIESE INDIVIDUALE
+// ═══════════════════════════════════════════════════════════
+
+function togglePieseMode() {
+  const mode = document.querySelector('input[name="pi_mode"]:checked').value;
+  const isVrac = mode === 'vrac';
+  document.getElementById('vrac-params').style.display = isVrac ? 'block' : 'none';
+  const lO = document.getElementById('lbl-ordonat');
+  const lV = document.getElementById('lbl-vrac');
+  lO.style.border   = isVrac ? '2px solid var(--gray-200)' : '2px solid var(--blue)';
+  lO.style.background = isVrac ? '' : 'var(--blue-lt)';
+  lO.style.color    = isVrac ? 'var(--gray-700)' : 'var(--blue)';
+  lV.style.border   = isVrac ? '2px solid var(--amber)' : '2px solid var(--gray-200)';
+  lV.style.background = isVrac ? 'var(--amber-lt)' : '';
+  lV.style.color    = isVrac ? 'var(--amber)' : 'var(--gray-700)';
+}
+
+function calcPiese() {
+  const pL  = parseFloat(document.getElementById('pi_L').value)   || 0;
+  const pl  = parseFloat(document.getElementById('pi_l').value)   || 0;
+  const ph  = parseFloat(document.getElementById('pi_h').value)   || 0;
+  const tol = parseFloat(document.getElementById('pi_tol').value) || 101;
+  const mode = document.querySelector('input[name="pi_mode"]:checked').value;
+
+  if (!pL || !pl || !ph) { alert('Completați dimensiunile piesei!'); return; }
+
+  const tbody = document.getElementById('piese-tbody');
+  tbody.innerHTML = '';
+
+  const ORIENT_PIECE = [
+    { label: 'L×l×h', dims: [pL, pl, ph] },
+    { label: 'L×h×l', dims: [pL, ph, pl] },
+    { label: 'l×L×h', dims: [pl, pL, ph] },
+    { label: 'l×h×L', dims: [pl, ph, pL] },
+    { label: 'h×L×l', dims: [ph, pL, pl] },
+    { label: 'h×l×L', dims: [ph, pl, pL] },
+  ];
+
+  const rows = [];
+  let recCount = 0;
+
+  if (mode === 'ordonat') {
+    BOXES.forEach(box => {
+      let best = null, bestRec = false;
+      ORIENT_PIECE.forEach(orient => {
+        const [rL, rl, rH] = orient.dims;
+        const nL = Math.floor(box.L / rL);
+        const nl = Math.floor(box.l / rl);
+        const nH = Math.floor(box.H / rH);
+        if (nL < 1 || nl < 1 || nH < 1) return;
+        const slackL = box.L - nL * rL;
+        const slackl = box.l - nl * rl;
+        const slackH = box.H - nH * rH;
+        const total = nL * nl * nH;
+        const rec = slackL < tol && slackl < tol && slackH < tol;
+        if (!best || (rec && !bestRec) || (!bestRec && total > best.total)) {
+          best = { orient: orient.label, nL, nl, nH, slackL, slackl, slackH, rec, total, rL, rl, rH };
+          bestRec = rec;
+        }
+      });
+      if (best) {
+        rows.push({ box, result: best, mode: 'ordonat' });
+        if (best.rec) recCount++;
+      }
+    });
+    rows.sort((a, b) => {
+      if (a.result.rec && !b.result.rec) return -1;
+      if (!a.result.rec && b.result.rec) return 1;
+      if (a.result.rec && b.result.rec) {
+        const wA = a.result.slackL + a.result.slackl + a.result.slackH;
+        const wB = b.result.slackL + b.result.slackl + b.result.slackH;
+        return wA - wB;
+      }
+      return b.result.total - a.result.total;
+    });
+
+  } else {
+    // Vrac
+    const factor = parseFloat(document.getElementById('pi_factor').value) / 100 || 0.6;
+    const Vp = pL * pl * ph;
+    const minPiece = Math.min(pL, pl, ph);
+    BOXES.forEach(box => {
+      if (minPiece > Math.min(box.L, box.l, box.H)) return; // piesa nu intră fizic
+      const Vb = box.L * box.l * box.H;
+      if (Vp > Vb) return;
+      const estimated = Math.floor(Vb * factor / Vp);
+      if (estimated < 1) return;
+      const util = Vp * estimated / Vb;
+      const rec = estimated >= 5 && util >= 0.35;
+      rows.push({ box, estimated, factor, Vp, Vb, util, rec, mode: 'vrac' });
+      if (rec) recCount++;
+    });
+    rows.sort((a, b) => {
+      if (a.rec && !b.rec) return -1;
+      if (!a.rec && b.rec) return 1;
+      // prefer utilization closest to 0.70
+      return Math.abs(b.util - 0.70) - Math.abs(a.util - 0.70);
+    });
+  }
+
+  if (rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--red)">⚠️ Piesa nu încape în nicio cutie disponibilă.</td></tr>';
+  } else {
+    rows.forEach(({ box, result, estimated, factor, Vp, Vb, util, rec: rowRec, mode: rowMode }, idx) => {
+      const tr = document.createElement('tr');
+      const isRec = rowMode === 'ordonat' ? result.rec : rowRec;
+      if (isRec) tr.classList.add('recommended');
+
+      const badge  = isRec ? '<span class="badge badge-green">✓ Se recomandă</span>' : '<span class="badge badge-gray">Nu se potrivește</span>';
+      const action = isRec ? `<button class="btn btn-outline btn-sm" onclick="selectBox(${box.id}, ${box.L}, ${box.l}, ${box.H}, '${box.name.replace(/'/g,"\\'")}')">→ Palet</button>` : '';
+
+      let piecesCell, orientCell, sketchCell, slackCell;
+
+      if (rowMode === 'ordonat') {
+        const sL = Math.round(result.slackL), sl = Math.round(result.slackl), sH = Math.round(result.slackH);
+        slackCell  = isRec ? `<span style="color:var(--green);font-weight:600">${sL} / ${sl} / ${sH}</span>` : `${sL} / ${sl} / ${sH}`;
+        piecesCell = `<div style="font-weight:700;font-size:15px;color:var(--blue)">${result.total}</div>
+                      <div style="font-size:11px;color:var(--gray-600);margin-top:2px">${result.nH} niv. × ${result.nL * result.nl} p/niv.</div>`;
+        orientCell = `<span class="orient-tag">${result.orient}</span>`;
+        sketchCell = generatePieceSketch(box, result);
+      } else {
+        const utilPct = Math.round(util * 100);
+        slackCell  = `<span style="color:var(--gray-600)">Vol. util: <strong>${utilPct}%</strong></span>`;
+        piecesCell = `<div style="font-weight:700;font-size:15px;color:var(--amber)">~${estimated}</div>
+                      <div style="font-size:11px;color:var(--gray-600);margin-top:2px">factor ${Math.round(factor*100)}%</div>`;
+        orientCell = '<span class="badge" style="background:var(--amber-lt);color:var(--amber);border:1px solid #fde68a">🎲 Vrac</span>';
+        sketchCell = generateVracViz(util);
+      }
+
+      tr.innerHTML = `
+        <td style="font-weight:600;color:var(--gray-600)">${idx + 1}</td>
+        <td style="font-weight:500">${box.name}</td>
+        <td style="text-align:center;font-family:monospace;font-size:12px;color:var(--gray-700)">${box.cod || '—'}</td>
+        <td><span class="orient-tag">${box.L}×${box.l}×${box.H}</span></td>
+        <td>${orientCell}</td>
+        <td style="text-align:center;white-space:nowrap">${piecesCell}</td>
+        <td style="padding:6px 8px">${sketchCell}</td>
+        <td>${slackCell}</td>
+        <td><span class="badge badge-blue">${box.tip}</span> ${box.cal}</td>
+        <td>${badge}</td>
+        <td>${action}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+    document.getElementById('pieseRecCount').textContent = recCount;
+  }
+  document.getElementById('piese-result-card').style.display = 'block';
+}
+
+function generatePieceSketch(box, result) {
+  // View Sus: nL col × nl rânduri (rL × rl în box.L × box.l)
+  // View Față: nL col × nH niveluri (rL × rH în box.L × box.H)
+  const SW = 72, SH = 58, PAD = 4, LH = 10;
+
+  function grid(cols, rows, dw, dh, totW, totH, lbl, fc, sc) {
+    const aw = SW - 2*PAD, ah = SH - 2*PAD - LH;
+    const s = Math.min(aw / totW, ah / totH) * 0.86;
+    const cw = dw*s, ch = dh*s;
+    const ox = PAD + (aw - cols*cw)/2, oy = PAD + (ah - rows*ch)/2;
+    let g = `<rect x="${(ox-2).toFixed(1)}" y="${(oy-2).toFixed(1)}" width="${(cols*cw+4).toFixed(1)}" height="${(rows*ch+4).toFixed(1)}" fill="#f8fafc" stroke="var(--gray-300)" stroke-width="1" stroke-dasharray="3,2" rx="1"/>`;
+    for (let r=0;r<rows;r++) for (let c=0;c<cols;c++)
+      g += `<rect x="${(ox+c*cw).toFixed(1)}" y="${(oy+r*ch).toFixed(1)}" width="${cw.toFixed(1)}" height="${ch.toFixed(1)}" fill="${fc}" stroke="${sc}" stroke-width="0.7" rx="0.5"/>`;
+    g += `<text x="${(SW/2).toFixed(1)}" y="${(SH-2).toFixed(1)}" text-anchor="middle" font-size="6.5" fill="var(--gray-600)" font-family="sans-serif">${lbl}</text>`;
+    return `<svg viewBox="0 0 ${SW} ${SH}" width="${SW}" height="${SH}" xmlns="http://www.w3.org/2000/svg" style="border:1px solid var(--gray-200);border-radius:4px;background:#fff">${g}</svg>`;
+  }
+
+  const top   = grid(result.nL, result.nl, result.rL, result.rl, box.L, box.l, `Sus: ${result.nL}×${result.nl}`,  '#e0f2fe', '#0284c7');
+  const front = grid(result.nL, result.nH, result.rL, result.rH, box.L, box.H, `Față: ${result.nL}×${result.nH}`, '#f0fdf4', '#16a34a');
+  return `<div style="display:flex;gap:4px;align-items:flex-start">${top}${front}</div>`;
+}
+
+function generateVracViz(utilization) {
+  const SW = 50, SH = 62, PAD = 5, LH = 11;
+  const bx = PAD, by = PAD, bw = SW-2*PAD, bh = SH-2*PAD-LH;
+  const fill = Math.min(Math.max(utilization, 0), 0.97);
+  const fillY = by + bh*(1-fill);
+  const fillHpx = bh*fill;
+  const fc = fill > 0.72 ? '#dcfce7' : fill > 0.45 ? '#fef3c7' : '#fee2e2';
+  const sc = fill > 0.72 ? '#16a34a' : fill > 0.45 ? '#d97706' : '#dc2626';
+  const pct = Math.round(fill*100);
+  // Decorative dots simulating random pieces
+  let dots = '';
+  const seed = [0.15,0.6,0.3,0.8,0.45,0.72,0.25,0.55,0.88,0.38,0.65,0.12];
+  const visible = Math.round(fill*12);
+  for (let i=0;i<visible;i++) {
+    const dx = bx+2 + seed[i]*( bw-8);
+    const dy = fillY+2 + seed[(i+5)%12]*(fillHpx-6);
+    dots += `<rect x="${dx.toFixed(1)}" y="${dy.toFixed(1)}" width="5" height="4" fill="${sc}" opacity="0.35" rx="0.5"/>`;
+  }
+  const svg = `
+    <rect x="${bx}" y="${by}" width="${bw}" height="${bh}" fill="white" stroke="var(--gray-300)" stroke-width="1.5" rx="2"/>
+    <rect x="${bx+1}" y="${fillY.toFixed(1)}" width="${bw-2}" height="${fillHpx.toFixed(1)}" fill="${fc}" rx="1"/>
+    ${dots}
+    <text x="${(SW/2).toFixed(1)}" y="${(by+bh/2+4).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="bold" fill="${sc}" font-family="sans-serif">${pct}%</text>
+    <text x="${(SW/2).toFixed(1)}" y="${(SH-2).toFixed(1)}" text-anchor="middle" font-size="6.5" fill="var(--gray-600)" font-family="sans-serif">vol. utilizat</text>
+  `;
+  return `<svg viewBox="0 0 ${SW} ${SH}" width="${SW}" height="${SH}" xmlns="http://www.w3.org/2000/svg" style="border:1px solid var(--gray-200);border-radius:4px;background:#fff">${svg}</svg>`;
+}
+
+function selectBox(id, L, l, H, name) {
+  // Populează Tab 3
+  document.getElementById('p_bl').value  = L;
+  document.getElementById('p_bl2').value = l;
+  document.getElementById('p_bh').value  = H;
+
+  const info = document.getElementById('sel-box-info');
+  info.textContent = `✅ Cutie selectată: ${name} (${L}×${l}×${H} mm)`;
+  info.classList.add('visible');
+
+  // Comută la tab-ul paleți
+  showTab('paleti');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  calcPaleti();
+}
+
+// ═══════════════════════════════════════════════════════════
+// TAB 3 – AȘEZAREA PE PALEȚI
+// ═══════════════════════════════════════════════════════════
+
+function calcPaleti() {
+  const bL  = parseFloat(document.getElementById('p_bl').value)  || 0;
+  const bl  = parseFloat(document.getElementById('p_bl2').value) || 0;
+  const bH  = parseFloat(document.getElementById('p_bh').value)  || 0;
+  const pL  = parseFloat(document.getElementById('p_pl').value)  || 1200;
+  const pl  = parseFloat(document.getElementById('p_pl2').value) || 800;
+  const pH  = parseFloat(document.getElementById('p_ph').value)  || 1600;
+  const tol = parseFloat(document.getElementById('p_tol').value) || 301;
+
+  if (!bL || !bl || !bH) { alert('Completați dimensiunile cutiei!'); return; }
+
+  const tbody = document.getElementById('paleti-tbody');
+  tbody.innerHTML = '';
+
+  // Toate 6 orientații posibile ale cutiei pe palet
+  const orientations = [
+    { label: 'L×l×H', dims: [bL, bl, bH] },
+    { label: 'L×H×l', dims: [bL, bH, bl] },
+    { label: 'l×L×H', dims: [bl, bL, bH] },
+    { label: 'l×H×L', dims: [bl, bH, bL] },
+    { label: 'H×L×l', dims: [bH, bL, bl] },
+    { label: 'H×l×L', dims: [bH, bl, bL] },
+  ];
+
+  const results = [];
+  orientations.forEach(orient => {
+    const [cL, cl, cH] = orient.dims;
+    const nL = Math.floor(pL / cL);
+    const nl = Math.floor(pl / cl);
+    const nH = Math.floor(pH / cH);
+    if (nL < 1 || nl < 1 || nH < 1) return;
+    const slackL = pL - nL * cL;
+    const slackl = pl - nl * cl;
+    const slackH = pH - nH * cH;
+    const total  = nL * nl * nH;
+    const rec    = slackL < tol && slackl < tol && slackH < tol;
+    results.push({ label: orient.label, nL, nl, nH, slackL, slackl, slackH, total, rec, cL, cl, cH });
+  });
+
+  // Sortare: recomandate → mai multe cutii
+  results.sort((a, b) => {
+    if (a.rec && !b.rec) return -1;
+    if (!a.rec && b.rec) return 1;
+    return b.total - a.total;
+  });
+
+  if (results.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--red)">⚠️ Cutia nu încape pe palet în nicio orientare.</td></tr>';
+  } else {
+    let recCount = 0;
+    results.forEach((r, idx) => {
+      if (r.rec) recCount++;
+      const tr = document.createElement('tr');
+      if (r.rec) tr.classList.add('recommended');
+
+      const badge = r.rec
+        ? '<span class="badge badge-green">✓ Se recomandă</span>'
+        : '<span class="badge badge-gray">Nu se potrivește</span>';
+
+      const sL = Math.round(r.slackL);
+      const sl = Math.round(r.slackl);
+      const sH = Math.round(r.slackH);
+      const slackStr = r.rec
+        ? `<span style="color:var(--green);font-weight:600">${sL} / ${sl} / ${sH}</span>`
+        : `${sL} / ${sl} / ${sH}`;
+
+      const sketch = generatePalletSketch(r, pL, pl, pH);
+
+      tr.innerHTML = `
+        <td style="font-weight:600;color:var(--gray-600);text-align:center">${idx + 1}</td>
+        <td>
+          <span class="orient-tag">${r.label}</span>
+          <div style="font-size:11px;color:var(--gray-600);margin-top:3px">${r.cL} × ${r.cl} × ${r.cH} mm</div>
+        </td>
+        <td style="text-align:center;white-space:nowrap">
+          <div style="font-weight:700;font-size:15px;color:var(--blue)">${r.total}</div>
+          <div style="font-size:11px;color:var(--gray-600);margin-top:2px">${r.nH} niv. × ${r.nL * r.nl} cut./niv.</div>
+        </td>
+        <td style="padding:6px 8px">${sketch}</td>
+        <td>${slackStr}</td>
+        <td>${badge}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+    document.getElementById('palRec').textContent = recCount;
+  }
+
+  document.getElementById('palet-result-card').style.display = 'block';
+}
+
+function generatePalletSketch(r, pL, pl, pH) {
+  const SVG_W = 74, SVG_H = 60;
+  const PAD = 4, LABEL_H = 11;
+
+  function drawGridSVG(cols, rows, dimW, dimH, totW, totH, label, fillCol, strokeCol) {
+    const aw = SVG_W - 2 * PAD;
+    const ah = SVG_H - 2 * PAD - LABEL_H;
+    const scale = Math.min(aw / totW, ah / totH) * 0.86;
+    const cw = dimW * scale;
+    const ch = dimH * scale;
+    const ox = PAD + (aw - cols * cw) / 2;
+    const oy = PAD + (ah - rows * ch) / 2;
+
+    // contur palet (dashed)
+    const px = (ox - 2).toFixed(1), py = (oy - 2).toFixed(1);
+    const pw = (cols * cw + 4).toFixed(1), ph = (rows * ch + 4).toFixed(1);
+    let svg = `<rect x="${px}" y="${py}" width="${pw}" height="${ph}" fill="#f8fafc" stroke="var(--gray-400)" stroke-width="1" stroke-dasharray="3,2" rx="1"/>`;
+
+    // cutii
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const x = (ox + col * cw).toFixed(1);
+        const y = (oy + row * ch).toFixed(1);
+        svg += `<rect x="${x}" y="${y}" width="${cw.toFixed(1)}" height="${ch.toFixed(1)}" fill="${fillCol}" stroke="${strokeCol}" stroke-width="0.8" rx="0.5"/>`;
+      }
+    }
+    // etichetă
+    svg += `<text x="${(SVG_W / 2).toFixed(1)}" y="${(SVG_H - 2).toFixed(1)}" text-anchor="middle" font-size="6.5" fill="var(--gray-600)" font-family="sans-serif">${label}</text>`;
+    return `<svg viewBox="0 0 ${SVG_W} ${SVG_H}" width="${SVG_W}" height="${SVG_H}" xmlns="http://www.w3.org/2000/svg" style="border:1px solid var(--gray-200);border-radius:4px;background:#fff">${svg}</svg>`;
+  }
+
+  // Sus (vedere de sus): nL coloane × nl rânduri  →  dimensiuni cL × cl pe suprafața paletului
+  const topView   = drawGridSVG(r.nL, r.nl, r.cL, r.cl, pL, pl, `Sus: ${r.nL}×${r.nl}`,   'var(--amber-lt)', 'var(--amber)');
+  // Față (vedere din față): nL coloane × nH niveluri  →  dimensiuni cL × cH
+  const frontView = drawGridSVG(r.nL, r.nH, r.cL, r.cH, pL, pH, `Față: ${r.nL}×${r.nH}`,  'var(--blue-lt)',  'var(--blue)');
+
+  return `<div style="display:flex;gap:4px;align-items:flex-start">${topView}${frontView}</div>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// TAB 4 – GESTIONARE CUTII
+// ═══════════════════════════════════════════════════════════
+
+let _editingBoxId = null;
+
+function renderBoxesTable() {
+  const tbody = document.getElementById('gestiune-tbody');
+  const countEl = document.getElementById('box-count');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  if (countEl) countEl.textContent = BOXES.length;
+
+  BOXES.forEach(box => {
+    const tr = document.createElement('tr');
+    if (_editingBoxId === box.id) tr.style.background = '#fffbeb';
+    tr.innerHTML = `
+      <td style="font-weight:600;color:var(--gray-600);text-align:center">${box.id}</td>
+      <td style="font-weight:500">${box.name}</td>
+      <td style="text-align:center;font-family:monospace;font-size:12px;color:var(--gray-700)">${box.cod || '—'}</td>
+      <td style="text-align:center">${box.L}</td>
+      <td style="text-align:center">${box.l}</td>
+      <td style="text-align:center">${box.H}</td>
+      <td><span class="badge badge-blue">${box.tip}</span></td>
+      <td>${box.cal}</td>
+      <td style="text-align:center">${box.greutate != null ? box.greutate.toFixed(2) : '—'}</td>
+      <td style="text-align:center">${box.pret != null ? box.pret.toFixed(2) : '—'}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-outline btn-sm" onclick="editBox(${box.id})" style="margin-right:4px">✏️ Edit</button>
+        <button class="btn btn-sm" style="background:var(--red-lt);color:var(--red);border:1px solid #fca5a5" onclick="deleteBox(${box.id})">🗑️ Șterge</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function editBox(id) {
+  const box = BOXES.find(b => b.id === id);
+  if (!box) return;
+  _editingBoxId = id;
+  document.getElementById('g-form-title').textContent = `Editează: ${box.name}`;
+  document.getElementById('g_id').value   = id;
+  document.getElementById('g_name').value = box.name;
+  document.getElementById('g_cod').value  = box.cod  || '';
+  document.getElementById('g_L').value    = box.L;
+  document.getElementById('g_l').value    = box.l;
+  document.getElementById('g_H').value    = box.H;
+  document.getElementById('g_tip').value  = box.tip;
+  document.getElementById('g_cal').value  = box.cal;
+  document.getElementById('g_gr').value   = box.greutate != null ? box.greutate : '';
+  document.getElementById('g_pret').value = box.pret    != null ? box.pret    : '';
+  renderBoxesTable();
+  document.getElementById('g-form-title').closest('.card').scrollIntoView({ behavior: 'smooth' });
+}
+
+function deleteBox(id) {
+  const box = BOXES.find(b => b.id === id);
+  if (!box) return;
+  if (!confirm(`Șterge cutia "${box.name}" (${box.L}×${box.l}×${box.H} mm)?`)) return;
+  BOXES = BOXES.filter(b => b.id !== id);
+  if (_editingBoxId === id) newBox();
+  renderBoxesTable();
+  saveBoxesToSupabase();
+  showMsg('Cutia a fost ștearsă.');
+}
+
+function saveBox() {
+  const name = (document.getElementById('g_name').value || '').trim();
+  const cod  = (document.getElementById('g_cod').value  || '').trim() || null;
+  const L    = parseFloat(document.getElementById('g_L').value)    || 0;
+  const l    = parseFloat(document.getElementById('g_l').value)    || 0;
+  const H    = parseFloat(document.getElementById('g_H').value)    || 0;
+
+  if (!name || !L || !l || !H) {
+    alert('Completați câmpurile obligatorii: Denumire, L, l, H!');
+    return;
+  }
+
+  const tip  = document.getElementById('g_tip').value;
+  const cal  = document.getElementById('g_cal').value;
+  const grv  = document.getElementById('g_gr').value;
+  const prv  = document.getElementById('g_pret').value;
+  const gr   = grv   !== '' ? parseFloat(grv)   : null;
+  const pret = prv   !== '' ? parseFloat(prv)   : null;
+  const isEdit = _editingBoxId != null;
+
+  if (isEdit) {
+    const idx = BOXES.findIndex(b => b.id === _editingBoxId);
+    if (idx >= 0) BOXES[idx] = { ...BOXES[idx], name, cod, L, l, H, tip, cal, greutate: gr, pret };
+    showMsg('✅ Cutia a fost actualizată!');
+  } else {
+    const newId = BOXES.length > 0 ? Math.max(...BOXES.map(b => b.id)) + 1 : 1;
+    BOXES.push({ id: newId, cod, name, L, l, H, tip, cal, greutate: gr, pret });
+    showMsg('✅ Cutie nouă adăugată!');
+  }
+
+  newBox();
+  renderBoxesTable();
+  saveBoxesToSupabase();
+}
+
+function newBox() {
+  _editingBoxId = null;
+  document.getElementById('g-form-title').textContent = 'Adaugă cutie nouă';
+  ['g_id','g_name','g_cod','g_L','g_l','g_H','g_gr','g_pret'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('g_tip').value = 'CO5';
+  document.getElementById('g_cal').value = 'T3FT';
+}
+
+function showMsg(txt) {
+  const el = document.getElementById('g-msg');
+  if (!el) return;
+  el.textContent = txt;
+  el.style.display = 'inline';
+  setTimeout(() => { el.style.display = 'none'; }, 3000);
+}
+
+// ═══════════════════════════════════════════════════════════
+// INIȚIALIZARE
+// ═══════════════════════════════════════════════════════════
+window.addEventListener('load', async () => {
+  // Incarca cutiile din Supabase (date comune)
+  var sbBoxes = await sbLoadShared(BOXES_KEY);
+  if(sbBoxes && Array.isArray(sbBoxes) && sbBoxes.length > 0) BOXES = sbBoxes;
+  calcRola();
+  calcCutii();
+  renderBoxesTable();
+  // Realtime sync
+  _getSb().channel('shared-rt-cutii')
+    .on('postgres_changes',{event:'*',schema:'public',table:'shared_data',filter:'key=eq.'+BOXES_KEY},function(payload){
+      if(!payload.new || !Array.isArray(payload.new.value)) return;
+      BOXES = payload.new.value;
+      renderBoxesTable();
+      calcCutii();
+    })
+    .subscribe();
+});
+</script>
+
+</body>
+</html>

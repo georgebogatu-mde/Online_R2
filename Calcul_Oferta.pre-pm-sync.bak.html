@@ -1,0 +1,3246 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calcul Ofertă</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ─── SUPABASE SYNC ────────────────────────────────────────────────────────────
+var _SB_URL='https://kdogtxfrnbclvgqkrnbk.supabase.co';
+var _SB_KEY='sb_publishable_GFKw1HsOGs8HKcCSGR2EgA_tajstNvO';
+var _sb2=null;
+function _getSb(){if(!_sb2&&window.supabase)_sb2=window.supabase.createClient(_SB_URL,_SB_KEY);return _sb2;}
+async function _getUID(){try{var r=await _getSb().auth.getSession();return r?.data?.session?.user?.id||null;}catch{return null;}}
+async function sbLoadUser(key){try{var sb=_getSb();if(!sb)return null;var uid=await _getUID();if(!uid)return null;var {data}=await sb.from('user_data').select('value').eq('user_id',uid).eq('key',key).maybeSingle();return data?.value??null;}catch{return null;}}
+async function sbSaveUser(key,value){try{var sb=_getSb();if(!sb)return;var uid=await _getUID();if(!uid)return;await sb.from('user_data').upsert({user_id:uid,key,value,updated_at:new Date().toISOString()},{onConflict:'user_id,key'});}catch{}}
+async function sbLoadShared(key){try{var sb=_getSb();if(!sb)return null;var {data}=await sb.from('shared_data').select('value').eq('key',key).maybeSingle();return data?.value??null;}catch{return null;}}
+async function sbSaveShared(key,value){try{var sb=_getSb();if(!sb)return;var uid=await _getUID();await sb.from('shared_data').upsert({key,value,updated_at:new Date().toISOString(),updated_by:uid},{onConflict:'key'});}catch{}}
+// ─────────────────────────────────────────────────────────────────────────────
+</script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<!-- fallback ExcelJS de pe UNPKG dacă jsdelivr e blocat -->
+<script>window.addEventListener('DOMContentLoaded',function(){if(!window.ExcelJS){var s=document.createElement('script');s.src='https://unpkg.com/exceljs@4.4.0/dist/exceljs.min.js';document.head.appendChild(s);}});</script>
+<style>
+:root{
+  --blue:#1565C0;--blue-dk:#0D47A1;--blue-lt:#E3F2FD;
+  --green:#2E7D32;--green-lt:#E8F5E9;
+  --orange:#E65100;--orange-lt:#FFF3E0;
+  --amber:#F57F17;--red:#C62828;
+  --bg:#EEF2F7;--card:#fff;--border:#D6DCE8;
+  --text:#1A2332;--muted:#6B7B8D;
+  --inp:#E8F5E9;--inp-bd:#81C784;
+  --dd:#FFF8E1;--dd-bd:#FFD54F;
+  --calc:#F5F6F8;--final:#FFF3E0;--final-bd:#FFB74D;--final-txt:#BF360C;
+  --r:6px;--r2:10px;--sh:0 2px 8px rgba(0,0,0,.10);--sh2:0 4px 16px rgba(0,0,0,.14);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--text);font-size:13px}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:#aaa;border-radius:3px}
+#hdr{position:sticky;top:0;z-index:300;background:linear-gradient(135deg,var(--blue-dk),var(--blue));
+  color:#fff;display:flex;align-items:center;gap:12px;padding:9px 18px;box-shadow:var(--sh2)}
+.logo{width:36px;height:36px;background:var(--orange);border-radius:8px;display:flex;align-items:center;
+  justify-content:center;font-size:18px;font-weight:900;flex-shrink:0}
+.hdr-info{flex:1;min-width:0}
+.hdr-info h1{font-size:1.05em;font-weight:700}
+#hdrOferta{font-size:.8em;background:rgba(255,255,255,.15);border-radius:5px;
+  padding:3px 10px;display:inline-flex;align-items:center;gap:8px;margin-top:3px;max-width:100%}
+#hdrOferta .hv{font-weight:700;background:var(--orange);padding:1px 7px;border-radius:3px;font-size:.85em}
+#hdrOferta .hd{opacity:.8;font-size:.88em}
+.hdr-acts{display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap}
+#saveStatus{font-size:.7em;opacity:.75;white-space:nowrap;align-self:flex-end;
+  background:rgba(0,0,0,.2);padding:2px 8px;border-radius:4px}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border:none;
+  border-radius:var(--r);font-size:.78em;font-weight:600;cursor:pointer;
+  transition:filter .15s,transform .1s;white-space:nowrap;font-family:inherit}
+.btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.btn:active{transform:none}
+.btn-wh{background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.3)}
+.btn-wh:hover{background:rgba(255,255,255,.28)}
+.btn-blue{background:var(--blue);color:#fff}
+.btn-green{background:var(--green);color:#fff}
+.btn-orange{background:var(--orange);color:#fff}
+.btn-amber{background:var(--amber);color:#fff}
+.btn-red{background:var(--red);color:#fff}
+.btn-ghost{background:transparent;color:var(--blue);border:1.5px solid var(--blue)}
+.btn-teal{background:#00796B;color:#fff}
+.btn-teal:hover{background:#00897B}
+.btn-sm{padding:4px 9px;font-size:.74em}
+.btn-xs{padding:3px 7px;font-size:.7em}
+#nav{background:var(--blue);display:flex;overflow-x:auto;border-bottom:3px solid rgba(0,0,0,.2);scrollbar-width:none}
+#nav::-webkit-scrollbar{display:none}
+.ntab{padding:11px 17px;cursor:pointer;color:rgba(255,255,255,.6);border-bottom:3px solid transparent;
+  margin-bottom:-3px;white-space:nowrap;font-size:.8em;font-weight:600;transition:all .15s;user-select:none}
+.ntab:hover{color:#fff;background:rgba(255,255,255,.08)}
+.ntab.on{color:#fff;border-bottom-color:var(--orange);background:rgba(255,255,255,.12)}
+.tab{display:none;padding:18px;animation:fi .2s ease}
+.tab.on{display:block}
+@keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideUp{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.offer-panel{background:linear-gradient(135deg,#E8F5E9 0%,#E3F2FD 100%);
+  border:1.5px solid #90CAF9;border-radius:var(--r2);padding:14px 16px;margin-bottom:14px;box-shadow:var(--sh)}
+.offer-panel-title{font-size:.72em;font-weight:700;color:var(--blue);cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;}
+.offer-panel-title:hover{opacity:.85}
+.offer-panel-body{overflow:hidden;transition:max-height .3s ease,opacity .3s ease;max-height:500px;opacity:1;}
+.offer-panel-body.collapsed{max-height:0;opacity:0;pointer-events:none;}
+.collapse-arrow{font-size:.9em;transition:transform .3s;display:inline-block;}
+.collapse-arrow.collapsed{transform:rotate(-90deg);}
+.offer-panel-title{font-size:.72em;font-weight:700;color:var(--blue);
+  text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.offer-fields{display:grid;grid-template-columns:2.2fr 1.3fr 1fr auto;gap:10px;align-items:end;margin-bottom:10px}
+@media(max-width:800px){.offer-fields{grid-template-columns:1fr 1fr}}
+.of label{display:block;font-size:.7em;font-weight:600;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.4px}
+.of input{background:#fff;border:1.5px solid #90CAF9;border-radius:var(--r);
+  padding:7px 10px;font-size:.9em;font-family:inherit;width:100%;outline:none;transition:border-color .15s,box-shadow .15s}
+.of input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(21,101,192,.12)}
+.vbadge{padding:7px 12px;border-radius:var(--r);font-size:.82em;font-weight:700;
+  text-align:center;letter-spacing:.5px;color:#fff;background:#90A4AE;white-space:nowrap}
+.vbadge.saved{background:var(--green)}.vbadge.dirty{background:var(--amber)}
+.offer-btns{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.offer-msg{font-size:.76em;padding:4px 10px;border-radius:4px;display:none}
+.offer-msg.ok{display:inline-block;background:#E8F5E9;color:var(--green);border:1px solid #A5D6A7}
+.offer-msg.err{display:inline-block;background:#FFEBEE;color:var(--red);border:1px solid #EF9A9A}
+.folder-bar{background:#FFF3E0;border:1px solid #FFB74D;border-radius:var(--r);
+  padding:6px 12px;margin-bottom:10px;font-size:.76em;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.folder-bar .fb-path{font-weight:600;color:var(--orange);font-family:monospace}
+.sec-h{background:linear-gradient(90deg,var(--blue-dk),var(--blue));color:#fff;
+  padding:10px 15px;border-radius:var(--r) var(--r) 0 0;font-weight:700;font-size:.87em;display:flex;align-items:center;gap:8px}
+.leg-bar{background:#f8f9fb;border:1px solid var(--border);border-left:none;border-right:none;
+  padding:6px 14px;display:flex;gap:16px;flex-wrap:wrap;font-size:.73em;color:var(--muted)}
+.lg{display:flex;align-items:center;gap:5px}
+.ld{width:12px;height:12px;border-radius:2px;border:1px solid rgba(0,0,0,.15);flex-shrink:0}
+.tbar{display:flex;gap:7px;padding:8px 0 6px;align-items:center;flex-wrap:wrap}
+.tbar .sp{flex:1}
+.twrap{overflow-x:auto;border:1px solid var(--border);border-top:none;border-radius:0 0 var(--r) var(--r)}
+table{border-collapse:collapse;min-width:100%}
+thead th{background:#1e3a5f;color:#fff;padding:6px 6px;text-align:center;
+  border:1px solid #163050;font-weight:500;font-size:.72em;white-space:nowrap;position:sticky;top:0;z-index:2}
+thead th.thg{background:#0f2540;font-size:.68em}
+thead th[data-tip]{cursor:help}
+tbody td{padding:3px 4px;border:1px solid #e8e8e8;text-align:center;vertical-align:middle}
+tbody tr:hover td{background:rgba(21,101,192,.05)!important}
+.tc{background:var(--calc);color:#444;font-weight:500}
+.tf{background:var(--final);color:var(--final-txt);font-weight:700}
+.tn{font-family:'Courier New',monospace;font-size:.76em}
+input[type=text],input[type=number],input[type=date],select{
+  width:100%;padding:3px 5px;border:1px solid #c8c8c8;border-radius:var(--r);
+  font-size:.79em;font-family:inherit;outline:none;transition:border-color .15s}
+input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(21,101,192,.15)}
+input.inp{background:var(--inp);border-color:var(--inp-bd)}
+select.dd{background:var(--dd);border-color:var(--dd-bd)}
+input[readonly]{background:var(--calc);border-color:transparent;cursor:default;color:#555}
+.krow{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.kcard{background:var(--card);border-radius:var(--r2);box-shadow:var(--sh);padding:13px 15px;border-left:4px solid var(--blue)}
+.kcard.ko{border-left-color:var(--orange)}.kcard.kg{border-left-color:var(--green)}.kcard.ka{border-left-color:var(--amber)}
+.kl{font-size:.7em;color:var(--muted);margin-bottom:3px;font-weight:500}
+.kv{font-size:1.45em;font-weight:700;line-height:1.2}
+.ks{font-size:.7em;color:var(--muted);margin-top:2px}
+.cgrid{display:grid;grid-template-columns:3fr 2fr;gap:14px;margin-bottom:14px}
+@media(max-width:850px){.cgrid{grid-template-columns:1fr}}
+.cc{background:var(--card);border-radius:var(--r2);box-shadow:var(--sh);padding:13px 15px}
+.ct{font-size:.78em;font-weight:700;color:var(--blue);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.cw{position:relative;height:230px}
+.acard{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:11px;box-shadow:var(--sh);overflow:hidden}
+.ahdr{background:linear-gradient(135deg,var(--blue-dk),var(--blue) 60%,#1976D2);color:#fff;padding:10px 15px;cursor:pointer;
+  display:flex;justify-content:space-between;align-items:center;user-select:none}
+.ahdr:hover{filter:brightness(1.08)}
+.atag{font-weight:700;font-size:.87em}.asub{font-size:.73em;opacity:.8;margin-top:2px}
+.akpis{display:flex;gap:15px;font-size:.77em}
+.akpi{text-align:right}.akpi span{display:block;font-size:.78em;opacity:.7}.akpi strong{font-size:1.05em}
+.akpi.hi strong{color:#FFD54F;font-size:1.18em}
+.abody{display:none;padding:15px;background:#fafbfc}.abody.on{display:block}
+.p2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px}
+@media(max-width:750px){.p2{grid-template-columns:1fr}}
+.pg{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:7px}
+.pf{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:7px 9px}
+.pf label{display:block;font-size:.7em;color:var(--muted);margin-bottom:3px}
+.ph{color:var(--blue);font-size:.79em;font-weight:700;margin-bottom:8px;padding-bottom:3px;
+  border-bottom:2px solid var(--blue-lt);display:flex;align-items:center;gap:5px}
+.rg{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:7px;margin-top:8px}
+.rc{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:7px 9px;text-align:center}
+.rc .rl{font-size:.68em;color:var(--muted);margin-bottom:2px}.rc .rv{font-size:.9em;font-weight:700}
+.rc.rf{background:var(--final);border-color:var(--final-bd)}.rc.rf .rv{color:var(--final-txt);font-size:1.02em}
+.rc.rb{background:var(--blue-lt);border-color:#90CAF9}.rc.rb .rv{color:var(--blue-dk)}
+.mt{width:100%;border-collapse:collapse;font-size:.77em}
+.mt th{background:#34495e;color:#fff;padding:5px 7px;border:1px solid #2c3e50;text-align:center}
+.mt td{border:1px solid #e8e8e8;padding:3px 5px;text-align:center}
+.mt tr:nth-child(even) td{background:#f8f9fa}
+.ctab{width:100%;border-collapse:collapse;font-size:.79em}
+.ctab th{background:var(--blue);color:#fff;padding:7px 9px;border:1px solid var(--blue-dk);text-align:left}
+.ctab td{padding:6px 9px;border:1px solid #e8e8e8}
+.ctab tr:nth-child(even) td{background:#f8f9fa}
+.ctab tr:hover td{background:rgba(21,101,192,.06)!important}
+.utab{width:100%;border-collapse:collapse;font-size:.78em}
+.utab th{background:#263238;color:#fff;padding:6px 8px;border:1px solid #1c272c;text-align:center}
+.utab td{border:1px solid #e8e8e8;padding:3px 4px;text-align:center}
+.utab tr:nth-child(even) td{background:#f8f9fa}
+/* FM table editable */
+.fm-table{width:100%;border-collapse:collapse;font-size:.82em}
+.fm-table th{background:#1F3864;color:#fff;padding:7px 10px;text-align:left;border:1px solid #163050}
+.fm-table td{padding:5px 8px;border:1px solid #e0e0e0;vertical-align:middle}
+.fm-table tr:nth-child(even) td{background:#f8f9fa}
+.fm-table tr:hover td{background:#EFF6FF!important}
+.fm-table input[type=number]{width:80px;background:#FFF9C4;border:1.5px solid #FFD54F;border-radius:4px;padding:3px 6px;font-weight:700;font-size:.88em}
+.fm-table input[type=number]:focus{border-color:var(--amber);box-shadow:0 0 0 2px rgba(245,127,23,.2)}
+.fm-note{background:#E3F2FD;border-left:4px solid var(--blue);padding:8px 12px;font-size:.76em;color:#1565C0;margin-top:8px;border-radius:0 4px 4px 0}
+.rg2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:650px){.rg2{grid-template-columns:1fr}}
+.rcard{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;box-shadow:var(--sh)}
+.rch{background:var(--blue-dk);color:#fff;padding:8px 13px;font-weight:700;font-size:.81em}
+.rtab{width:100%;border-collapse:collapse;font-size:.78em}
+.rtab th{background:#263238;color:#fff;padding:5px 9px;text-align:left}
+.rtab td{padding:5px 9px;border-bottom:1px solid #eee}
+.rtab tr:last-child td{border-bottom:none}
+.rtab tr:nth-child(even) td{background:#f8f9fa}
+.fbox{background:#fff8f0;border-left:4px solid var(--orange);padding:9px 13px;margin:8px 0;font-size:.76em;line-height:1.75;color:#555}
+code{background:#f0f0f0;padding:1px 4px;border-radius:3px;font-family:'Courier New',monospace;font-size:.88em}
+.del{background:none;border:1px solid var(--red);color:var(--red);border-radius:3px;cursor:pointer;padding:1px 6px;font-size:.75em;transition:all .15s}
+.del:hover{background:var(--red);color:#fff}
+.tsel{background:none;border:1.5px solid #90A4AE;color:#90A4AE;border-radius:50%;cursor:pointer;
+  width:20px;height:20px;font-size:.8em;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.tsel:hover{border-color:var(--blue);color:var(--blue)}
+.tsel.on{background:var(--blue);border-color:var(--blue);color:#fff}
+tr.tmpl-row td{background:rgba(21,101,192,.07)!important}
+tr.tmpl-row{outline:2px solid var(--blue);outline-offset:-1px}
+#tmplInfo{font-size:.72em;padding:3px 9px;border-radius:4px;background:rgba(21,101,192,.1);color:var(--blue);font-weight:600}
+.mbg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;align-items:center;justify-content:center;padding:16px}
+.mbg.on{display:flex}
+.mbox{background:#fff;border-radius:var(--r2);padding:22px;width:100%;max-width:900px;max-height:90vh;overflow-y:auto;box-shadow:var(--sh2)}
+.mbox.sm{max-width:460px}
+.mbox h3{color:var(--blue);margin-bottom:14px;font-size:1em;display:flex;align-items:center;gap:8px;border-bottom:2px solid var(--blue-lt);padding-bottom:10px}
+.mbtns{display:flex;gap:8px;margin-top:14px;justify-content:flex-end;flex-wrap:wrap}
+.frow{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end;margin-bottom:12px;padding:12px;background:var(--blue-lt);border-radius:var(--r)}
+@media(max-width:600px){.frow{grid-template-columns:1fr 1fr}}
+.fl label{display:block;font-size:.7em;font-weight:600;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.4px}
+.fl input{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:6px 9px;font-size:.82em;font-family:inherit;width:100%;outline:none}
+.fl input:focus{border-color:var(--blue)}
+.vtab{width:100%;border-collapse:collapse;font-size:.79em}
+.vtab th{background:var(--blue);color:#fff;padding:7px 9px;text-align:left;border:1px solid var(--blue-dk)}
+.vtab td{padding:7px 9px;border-bottom:1px solid #eee;vertical-align:middle}
+.vtab tr:nth-child(even) td{background:#f8f9fa}
+.vtab tr:hover td{background:var(--blue-lt)!important}
+.ver-num{background:var(--green);color:#fff;padding:2px 8px;border-radius:12px;font-size:.75em;font-weight:700;white-space:nowrap}
+.no-data{text-align:center;color:var(--muted);padding:30px;font-size:.85em;font-style:italic}
+#toast{position:fixed;bottom:24px;right:24px;z-index:999;background:#323232;color:#fff;padding:11px 18px;border-radius:8px;
+  font-size:.82em;box-shadow:0 4px 20px rgba(0,0,0,.35);transform:translateY(80px);opacity:0;transition:all .3s ease;pointer-events:none}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.ok{background:var(--green)}#toast.err{background:var(--red)}#toast.warn{background:var(--amber);color:#000}
+@media print{#hdr,#nav,.tbar,.del,.offer-btns,.hdr-acts,#toast,.folder-bar{display:none!important}
+  .tab{display:block!important;page-break-before:always}.tab:first-of-type{page-break-before:auto}.abody{display:block!important}}
+
+/* ═══ HELP MODAL ═══ */
+#helpModal .mbox{max-width:860px;width:95vw;max-height:88vh;display:flex;flex-direction:column;padding:0;overflow:hidden}
+.help-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:linear-gradient(135deg,#1F3864,#2E75B6);color:#fff;flex-shrink:0}
+.help-hdr h3{margin:0;font-size:1.05em;display:flex;align-items:center;gap:8px}
+.help-body{display:flex;flex:1;min-height:0;overflow:hidden}
+.help-nav{width:168px;flex-shrink:0;background:#F0F4FA;border-right:1px solid #D0DCF0;overflow-y:auto;padding:8px 0}
+.help-nav-item{padding:9px 16px;cursor:pointer;font-size:.8em;font-weight:600;color:#2c3e50;border-left:3px solid transparent;transition:all .15s;display:flex;align-items:center;gap:7px}
+.help-nav-item:hover{background:#E3EAF8;color:#1F3864}
+.help-nav-item.active{background:#E3EAF8;color:#1F3864;border-left-color:#2E75B6}
+.help-content{flex:1;overflow-y:auto;padding:20px 24px;font-size:.82em;line-height:1.6}
+.help-sec{display:none}.help-sec.active{display:block}
+.help-sec h2{color:#1F3864;font-size:1em;margin:0 0 12px;padding-bottom:7px;border-bottom:2px solid #D0DCF0;display:flex;align-items:center;gap:7px}
+.help-sec h3{color:#2E75B6;font-size:.88em;margin:14px 0 6px;display:flex;align-items:center;gap:6px}
+.help-sec p{margin:0 0 8px;color:#374151}
+.help-sec ul{margin:4px 0 10px 18px;color:#374151}
+.help-sec li{margin-bottom:4px}
+.help-tip{background:#E8F5E9;border-left:3px solid #4CAF50;padding:7px 12px;border-radius:0 4px 4px 0;margin:8px 0;font-size:.92em}
+.help-warn{background:#FFF8E1;border-left:3px solid #FFC107;padding:7px 12px;border-radius:0 4px 4px 0;margin:8px 0;font-size:.92em}
+.help-kbd{display:inline-block;background:#f1f3f5;border:1px solid #ced4da;border-radius:3px;padding:1px 6px;font-family:monospace;font-size:.9em;color:#495057}
+.help-badge{display:inline-block;padding:1px 7px;border-radius:10px;font-size:.78em;font-weight:700;margin-left:4px}
+.hb-green{background:#E8F5E9;color:#2E7D32}
+.hb-yellow{background:#FFF8E1;color:#6D4C00}
+.hb-gray{background:#F5F5F5;color:#555}
+.hb-orange{background:#FBE9E7;color:#BF360C}
+.hb-blue{background:#E3F2FD;color:#0D47A1}
+.help-tbl{width:100%;border-collapse:collapse;margin:8px 0 12px;font-size:.9em}
+.help-tbl th{background:#1F3864;color:#fff;padding:6px 10px;text-align:left;font-weight:600}
+.help-tbl td{padding:5px 10px;border-bottom:1px solid #E8ECF0;vertical-align:top}
+.help-tbl tr:nth-child(even) td{background:#F7F9FC}
+.btn-help{background:#2E75B6;color:#fff;border:none;padding:2px 10px;border-radius:4px;cursor:pointer;font-size:.78em;margin-left:8px}
+
+/* Resizable columns */
+#tPC th {position:relative;user-select:none;}
+#tPC th .col-resizer {position:absolute;right:0;top:0;width:5px;height:100%;cursor:col-resize;background:transparent;z-index:10;}
+#tPC th .col-resizer:hover,#tPC th .col-resizer.dragging{background:rgba(255,255,255,0.4);}
+#tPC{min-width:max-content;}
+#tPC td input,#tPC td select{width:100%;box-sizing:border-box;min-width:0;text-overflow:ellipsis;overflow:hidden;}
+#tPC td{overflow:hidden;padding:2px 3px;}
+</style>
+</head>
+<body>
+<div id="hdr">
+  <div class="logo">C</div>
+  <div class="hdr-info">
+    <h1>PROGRAM CALCUL OFERTE — Cost Material &amp; Producție</h1>
+    <div id="hdrOferta">
+      <span class="hd" id="hdrName">Ofertă nouă</span>
+      <span class="hv" id="hdrVer">NOUĂ</span>
+      <span class="hd" id="hdrDate"></span>
+    </div>
+  </div>
+  <span id="saveStatus">● nesalvat</span>
+  <div class="hdr-acts">
+    <button class="btn btn-wh btn-sm" onclick="saveOffer()">💾 Salvează</button>
+    <button class="btn btn-wh btn-sm" onclick="openLoadModal()">📂 Încarcă</button>
+    <button class="btn btn-wh btn-sm" onclick="exportOfferXLSX()">📊 Export Excel</button>
+    <button class="btn btn-wh btn-sm" onclick="exportDatabaseJSON()">⬆ Export BD</button>
+    <button class="btn btn-wh btn-sm" onclick="pickSaveFolder()">📁 Folder</button>
+    <button class="btn btn-wh btn-sm" onclick="printCen()">🖨 Print Centralizator</button>
+    <button class="btn btn-wh btn-sm" onclick="openHelp()" title="Ajutor — F1">❓ Help</button>
+  </div>
+</div>
+<div id="folderBanner" style="display:none;align-items:center;justify-content:center;gap:12px;
+  background:#FFF8E1;border-bottom:2px solid #FFC107;padding:8px 18px;font-size:.84em;color:#5D4037">
+  <span id="folderBannerMsg">🔒 <b>Folderul de salvare</b> <span id="folderBannerName"></span> necesită reconfirmarea accesului după repornirea browserului.</span>
+  <button id="folderBannerBtn" onclick="reconfirmFolder()" style="background:#F57F17;color:#fff;border:none;border-radius:5px;
+    padding:5px 14px;font-size:.88em;font-weight:600;cursor:pointer;white-space:nowrap">
+    🔓 Reconfirmă accesul
+  </button>
+  <button onclick="document.getElementById('folderBanner').style.display='none'"
+    style="background:none;border:none;color:#888;font-size:1em;cursor:pointer;padding:0 4px" title="Închide">✕</button>
+</div>
+<div id="nav">
+  <div class="ntab" onclick="showTab('dash',this)">📊 Dashboard</div>
+  <div class="ntab on" onclick="showTab('pc',this)">🧮 Program Calcul</div>
+  <div class="ntab" onclick="showTab('ret',this)">🧾 Rețetă Piesă</div>
+  <div class="ntab" onclick="showTab('cen',this)">📋 Centralizator</div>
+  <div class="ntab" onclick="showTab('utl',this)">⚙️ Utilaje</div>
+  <div class="ntab" onclick="showTab('ref',this)">📚 Referințe</div>
+</div>
+<!-- DASHBOARD -->
+<div id="tab-dash" class="tab">
+  <div id="krow" class="krow"></div>
+  <div class="cgrid">
+    <div class="cc"><div class="ct">📊 Prețuri per Articol (€/piesă)</div><div class="cw"><canvas id="cBar"></canvas></div></div>
+    <div class="cc">
+      <div class="ct">🥧 Defalcare Cost —
+        <select id="selPie" onchange="renderPie()" style="width:auto;font-size:.82em;padding:2px 5px;margin-left:4px"></select>
+      </div>
+      <div class="cw"><canvas id="cPie"></canvas></div>
+    </div>
+  </div>
+  <div class="cc"><div class="ct">📈 Cost Producție vs Preț Final vs Metodă Veche</div>
+    <div style="position:relative;height:200px"><canvas id="cLine"></canvas></div></div>
+</div>
+<!-- PROGRAM CALCUL -->
+<div id="tab-pc" class="tab on">
+  <div class="offer-panel">
+    <div class="offer-panel-title" onclick="toggleOfferPanel()" title="Click pentru a restrânge/extinde panoul">
+      <span>📄 Informații Ofertă</span>
+      <span class="collapse-arrow" id="offerPanelArrow">▼</span>
+    </div>
+    <div class="offer-panel-body" id="offerPanelBody">
+    <div class="folder-bar" id="folderBar" style="background:#fff3e0;border-color:#ff9800">
+      <span style="white-space:nowrap">📁 Folder salvare:</span>
+      <span class="fb-path" id="folderPath" style="flex:1">⚠ Folder neselectat — selectați folderul unde se află Calcul_Oferta.html</span>
+      <button class="btn btn-orange btn-xs" onclick="pickSaveFolder()" title="Selectați o singură dată folderul proiectului — va fi reținut automat">📁 Selectează Folder</button>
+    </div>
+
+    <div class="offer-fields">
+      <div class="of"><label>Denumire Ofertă *</label>
+        <input id="ofName" type="text" placeholder="ex: Ofertă Transfer Tape PIEGA 2024" oninput="markDirty();updateHdrDisplay()"></div>
+      <div class="of"><label>Data Întocmirii</label>
+        <input id="ofDate" type="date" oninput="markDirty();updateHdrDisplay()"></div>
+      <div class="of"><label>Nr. Proiect</label>
+        <input id="ofProiect" type="text" placeholder="ex: 2653" oninput="markDirty()"></div>
+      <div class="of"><label>Versiune</label><div class="vbadge" id="vBadge">NOUĂ</div></div>
+    </div>
+    <div class="offer-btns">
+      <button class="btn btn-green" onclick="saveOffer()">💾 Salvează Ofertă</button>
+      <button class="btn btn-blue" onclick="openLoadModal()">📂 Încarcă Proiect</button>
+      <button class="btn btn-amber" onclick="exportOfferXLSX()">📊 Export Excel</button>
+      <button class="btn btn-orange btn-sm" onclick="exportDatabaseJSON()">⬆ Export BD (JSON)</button>
+      <button class="btn btn-ghost btn-sm" onclick="openNewOfferModal()">＋ Ofertă Nouă</button>
+      <button class="btn btn-teal btn-sm" onclick="document.getElementById('importLegacyInput').click()" title="Import articole din xlsx/xlsm — detectare automată format">📥 Import xlsx / xlsm</button>
+      <input type="file" id="importLegacyInput" accept=".xlsx,.xlsm" style="display:none" onchange="handleImportXLSX(this)">
+      <span class="offer-msg" id="offerMsg"></span>
+    </div>
+    </div><!-- /offer-panel-body -->
+  </div>
+  <div class="sec-h">🧮 Program Calcul — Calcul Cost Material</div>
+  <div class="leg-bar">
+    <div class="lg"><div class="ld" style="background:#E2EFDA"></div>Câmp editabil (verde)</div>
+    <div class="lg"><div class="ld" style="background:#FFF2CC"></div>Dropdown (galben)</div>
+    <div class="lg"><div class="ld" style="background:#F2F2F2"></div>Calculat automat (gri)</div>
+    <div class="lg"><div class="ld" style="background:#FCE4D6"></div>Preț final (portocaliu)</div>
+  </div>
+  <div class="tbar">
+    <button class="btn btn-blue btn-sm" onclick="addArt()">＋ Articol nou</button>
+    <span id="tmplInfo" style="display:none"></span>
+    <span class="sp"></span>
+    <span style="font-size:.75em;color:var(--muted)">Articole: <b id="artCnt">0</b> / 15</span>
+  </div>
+  <div class="twrap" style="max-height:calc(100vh - 360px)">
+    <table id="tPC">
+      <thead>
+        <tr>
+          <th rowspan="2">#</th><th rowspan="2">PRJ</th><th rowspan="2">Client</th>
+          <th rowspan="2">OEM</th><th rowspan="2">Proiect</th><th rowspan="2">SOP</th>
+          <th rowspan="2" style="min-width:218px">Denumire</th>
+          <th rowspan="2" style="background:#5a4000">Set</th>
+          <th rowspan="2">Pc/Set<br><small style="font-weight:400;font-size:9px">buc</small></th><th rowspan="2">EYV<br><small style="font-weight:400;font-size:9px">buc</small></th><th rowspan="2">MOQ<br><small style="font-weight:400;font-size:9px">buc</small></th>
+          <th rowspan="2" style="background:#5a4000;min-width:108px">Utilaj</th>
+          <th colspan="7" class="thg">DIMENSIUNI PIESĂ</th>
+          <th colspan="4" class="thg" style="background:#1a1040">EYV &amp; ROLĂ</th>
+          <th colspan="16" class="thg" style="background:#0a2540">LOG &amp; PREȚ MATERIAL</th>
+          <th colspan="4" class="thg" style="background:#3e1a00">FM &amp; PREȚ FINAL</th>
+          <th rowspan="2">NPD<br><small style="font-weight:400;font-size:9px">€</small></th><th rowspan="2">Prod%</th><th rowspan="2"></th>
+        </tr>
+        <tr>
+          <th>L<br><small>mm</small></th><th>l<br><small>mm</small></th><th>g<br><small>mm</small></th><th>Avans<br><small>mm</small></th><th>Pc/Av<br><small>buc</small></th><th>GapÎ<br><small>mm</small></th><th>GapM<br><small>mm</small></th>
+          <th>SfEYV<br><small>mm</small></th><th>VlEYV<br><small>mm</small></th><th>FRot<br><small>buc</small></th><th>LUtilă<br><small>mm</small></th>
+          <th>Mat1<br><small>mm</small></th><th>Mat2<br><small>mm</small></th><th>LatL<br><small>mm</small></th><th>LunL<br><small>m</small></th><th style="background:#B2DFDB;color:#003731">PrM1<br><small>€/m²</small></th><th style="background:#B2DFDB;color:#003731">PrM2<br><small>€/m²</small></th><th style="background:#B2DFDB;color:#003731">PrM3<br><small>€/m²</small></th><th style="background:#B2DFDB;color:#003731">PrM4<br><small>€/m²</small></th><th style="background:#4DB6AC;color:#003731;font-weight:700">PrMt<br><small style="font-weight:400;font-size:9px">€/m²</small></th><th>€/Log<br><small>€</small></th><th>Nr.Ro<br><small>buc</small></th><th>Pier<br><small>mm</small></th><th>Pc/Ro<br><small>buc</small></th><th>Pc/Log<br><small>buc</small></th><th>Cost/p<br><small>€</small></th><th>Cost/s<br><small>€</small></th>
+          <th style="background:#5a4000">Sel.FM</th><th>FM</th>
+          <th style="background:#5c1a00">€/Piesă</th><th style="background:#5c1a00">€/Set</th>
+        </tr>
+      </thead>
+      <tbody id="bodyPC"></tbody>
+    </table>
+  </div>
+</div>
+<!-- RETETA -->
+<div id="tab-ret" class="tab">
+  <div class="sec-h">🧾 Rețetă Piesă — Calcul Cost de Producție</div>
+  <p style="font-size:.78em;color:var(--muted);padding:8px 0 6px">Click pe un articol pentru a-l extinde. Costurile se recalculează automat.</p>
+  <div id="retCont"></div>
+</div>
+<!-- CENTRALIZATOR -->
+<div id="tab-cen" class="tab">
+  <div class="sec-h">📋 Centralizator Oferte — Rezumat Cost Producție</div>
+  <div class="twrap" style="margin-bottom:16px">
+    <table class="ctab">
+      <thead><tr>
+        <th>Nr.</th><th>Cod</th><th>Denumire</th><th>Utilaj</th>
+        <th>MOQ<br><small>buc</small></th>
+        <th>L<br><small>mm</small></th><th>l<br><small>mm</small></th><th>g<br><small>mm</small></th>
+        <th>Mat1<br><small>mm</small></th><th>Mat2<br><small>mm</small></th>
+        <th>Cost Prod<br><small>€/p</small></th>
+        <th>Preț Met.Nouă<br><small>€/p</small></th><th>×1000<br><small>€</small></th>
+        <th>Preț Met.Veche<br><small>€/p</small></th><th>×1000<br><small>€</small></th>
+        <th>NPD<br><small>€</small></th><th style="background:#1B5E20">An 1<br><small>€/p (-3%)</small></th>
+        <th style="background:#1B5E20">An 2<br><small>€/p (-3%)</small></th>
+        <th style="background:#1B5E20">An 3<br><small>€/p (-3%)</small></th>
+      </tr></thead>
+      <tbody id="bodyCen"></tbody>
+    </table>
+  </div>
+  <div class="cc"><div class="ct">📊 Comparație Articole</div>
+    <div style="position:relative;height:260px"><canvas id="cCen"></canvas></div></div>
+</div>
+<!-- UTILAJE -->
+<div id="tab-utl" class="tab">
+  <div class="sec-h">⚙️ Tabel Utilaje — Parametri și Costuri</div>
+  <div class="tbar">
+    <button class="btn btn-green btn-sm" onclick="recalcAll();showToast('Parametri utilaje salvați!','ok')">💾 Salvează</button>
+    <button class="btn btn-blue btn-sm" onclick="saveSablon()" title="Salvează valorile curente ca șablon pentru ofertele noi">📌 Salvează ca Șablon</button>
+    <span id="sablonInfo" style="font-size:.75em;color:var(--muted)"></span>
+    <span style="font-size:.75em;color:var(--muted)">Modificați parametrii — costurile se actualizează automat</span>
+  </div>
+  <div class="twrap">
+    <table class="utab" id="tUtl">
+      <thead><tr>
+        <th>Nr.</th><th style="text-align:left">Utilaj</th>
+        <th>Putere kW</th><th>Energie €/kWh</th>
+        <th>Op.Tip1</th><th>Op.Tip2</th><th>Op.Tip3</th><th>Timp/p (s)</th>
+        <th>Cost/s €</th><th>Cost/p €</th>
+      </tr></thead>
+      <tbody id="bodyUtl"></tbody>
+    </table>
+  </div>
+</div>
+<!-- REFERINTE -->
+<div id="tab-ref" class="tab">
+  <div class="sec-h">📚 Tabel de Referință — Formule, FM, Parametri</div>
+  <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <!-- FM EDITABIL -->
+    <div class="rcard">
+      <div class="rch">Factori FM — Multiplicatori Preț (editabili)</div>
+      <div style="padding:12px">
+        <table class="fm-table" id="fmTable">
+          <thead><tr><th>Caz FM</th><th>Multiplicator</th><th>Descriere</th></tr></thead>
+          <tbody id="fmBody"></tbody>
+        </table>
+        <div style="margin-top:8px"><button class="btn btn-blue btn-sm" onclick="saveSablon()">📌 Salvează ca Șablon</button></div>
+        <div class="fm-note">💡 Modificați multiplicatorii direct în câmpurile de mai sus. Valorile se aplică imediat în toate calculele.</div>
+      </div>
+    </div>
+    <!-- FORMULE PC -->
+    <div class="rcard">
+      <div class="rch">Formule Program Calcul</div>
+      <div style="padding:10px 13px">
+        <div class="fbox"><b>Lățime Utilă Rolă:</b><br><code>CEILING(l+(Pc/Av−1)×GapÎntre+2×GapMarg, FactorRot)</code></div>
+        <div class="fbox"><b>Preț Log:</b><br><code>LungLog[m]×1000×LățLog[mm]/1 000 000×Preț/m²</code></div>
+        <div class="fbox"><b>Calcul piese:</b><br>
+          <code>Nr.Role/Log = TRUNC(LățLog / LățUtilă)</code><br>
+          <code>Pc/Rolă = TRUNC(LungLog×1000/Avans×Pc/Avans)</code><br>
+          <code>Pc/Log = Pc/Rolă × Nr.Role/Log</code><br>
+          <code>Cost/Piesă = Preț/Log ÷ Pc/Log</code>
+        </div>
+        <div class="fbox"><b>Preț final:</b><br>
+          <code>FM="&lt;10€/1000 Buc" → Cost/p + 0.01</code><br>
+          <code>Altfel → Cost/p × Multiplicator FM</code>
+        </div>
+      </div>
+    </div>
+    <!-- FORMULE RETETA -->
+    <div class="rcard">
+      <div class="rch">Formule Rețetă Piesă</div>
+      <div style="padding:10px 13px">
+        <div class="fbox"><b>Cost Utilaje:</b><br><code>Σ(kW×€/kWh/3600×Timp_s×FactorDif)</code></div>
+        <div class="fbox"><b>Manoperă:</b><br><code>Σ((Timp_s+Setup_min×60/MOQ)×(Op1×T1+Op2×T2+Op3×T3)/3600×FD)</code></div>
+        <div class="fbox"><b>Flux calcul:</b><br>
+          <code>MatScrap = MPI×(1+SCRAP%)</code><br>
+          <code>MatTotal = MatScrap + MatScrap×CPM%</code><br>
+          <code>CD = MatTotal+Utilaje+Manoperă+CAM+Transport</code><br>
+          <code>CostProd = CD + CD×CI%</code><br>
+          <code>TotalFărăTVA = CostProd×(1+Profit%)</code>
+        </div>
+        <div class="fbox"><b>Factor Dificultate:</b> Niv.1→×1.0 | Niv.2→×1.3 | Niv.3→×1.6</div>
+      </div>
+    </div>
+    <!-- CIFRE CEILING -->
+    <div class="rcard">
+      <div class="rch">Cifre Ceiling &amp; Logică Set</div>
+      <table class="rtab"><thead><tr><th>Factor</th><th>Efect</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Fără rotunjire (exact)</td></tr>
+        <tr><td>2,3...15</td><td>Rotunjit la cel mai mic multiplu ≥ valoare</td></tr>
+      </tbody></table>
+      <div style="padding:8px 13px">
+        <div class="fbox"><b>Set=NU:</b> Calcul per piesă. SfEYV nu se înmulțește cu Nr.Piese/Set.<br>
+        <b>Set=DA:</b> Calcul per set. SfEYV, Cost/Set, Preț/Set × Nr.Piese/Set.</div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- MODAL IMPORT OFERTĂ VECHE -->
+
+<!-- MODAL IMPORT MDE FORMAT -->
+<div class="mbg" id="importMDEModal">
+  <div class="mbox" style="max-width:680px">
+    <h3>📥 Import Format MDE — <span id="iMDEFileName" style="font-weight:400;font-size:.85em"></span></h3>
+    <div id="iMDEPreview" style="margin:10px 0;max-height:200px;overflow-y:auto;font-size:.8em"></div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin:10px 0;padding:10px;background:#F0F4FA;border-radius:6px">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+        <input type="checkbox" id="iMDEUtilaje" checked> <span>Importă și actualizează <b>Utilaje</b></span>
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+        <input type="checkbox" id="iMDEFM" checked> <span>Importă și actualizează <b>FM / Referințe</b></span>
+      </label>
+    </div>
+    <div style="margin:10px 0;padding:10px;background:#F0F4FA;border-radius:6px">
+      <b>Articole:</b>
+      <label style="margin-left:16px"><input type="radio" name="importMDEMode" value="replace" checked> Înlocuiește toate</label>
+      <label style="margin-left:12px"><input type="radio" name="importMDEMode" value="add"> Adaugă la existente</label>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="closeImportMDEModal()">Anulează</button>
+      <button class="btn btn-green" onclick="confirmImportMDE()">✅ Importă</button>
+    </div>
+  </div>
+</div>
+
+<div class="mbg" id="importLegacyModal">
+  <div class="mbox" style="max-width:760px;max-height:85vh;display:flex;flex-direction:column">
+    <h3>📥 Import Ofertă Veche (Format XLSX Export)</h3>
+    <div id="importLegacyInfo" style="font-size:.8em;color:var(--muted);margin-bottom:10px"></div>
+    <div style="flex:1;overflow-y:auto;min-height:0;margin-bottom:10px">
+      <table style="width:100%;border-collapse:collapse;font-size:.78em">
+        <thead>
+          <tr style="background:#1F3864;color:#fff;position:sticky;top:0">
+            <th style="padding:6px 8px;text-align:center">#</th>
+            <th style="padding:6px 8px;text-align:left">Denumire</th>
+            <th style="padding:6px 8px;text-align:center">PRJ</th>
+            <th style="padding:6px 8px;text-align:left">Client</th>
+            <th style="padding:6px 8px;text-align:center">Utilaj</th>
+            <th style="padding:6px 8px;text-align:center">EYV</th>
+            <th style="padding:6px 8px;text-align:center">MOQ</th>
+            <th style="padding:6px 8px;text-align:left">Material</th>
+          </tr>
+        </thead>
+        <tbody id="importLegacyPreview"></tbody>
+      </table>
+    </div>
+    <div style="background:#E8F5E9;border:1px solid #A5D6A7;border-radius:var(--r);padding:10px 14px;font-size:.8em;margin-bottom:12px">
+      <b>Mod de import:</b>
+      <label style="margin:0 14px 0 8px;cursor:pointer">
+        <input type="radio" name="importMode" value="add" checked style="margin-right:4px"> Adaugă la articolele existente
+      </label>
+      <label style="cursor:pointer">
+        <input type="radio" name="importMode" value="replace" style="margin-right:4px"> Înlocuiește toate articolele existente
+      </label>
+    </div>
+    <div class="mbtns">
+      <button class="btn btn-ghost btn-sm" onclick="closeImportLegacyModal()">✕ Anulează</button>
+      <button class="btn btn-teal" id="importLegacyConfirmBtn" onclick="confirmImportLegacy()">✅ Importă Articolele</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL HELP -->
+<div class="mbg" id="helpModal">
+  <div class="mbox">
+    <div class="help-hdr">
+      <h3>❓ Ghid de utilizare — Program Calcul Oferte</h3>
+      <button onclick="closeHelp()" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:1em">✕</button>
+    </div>
+    <div class="help-body">
+      <!-- Navigare stânga -->
+      <div class="help-nav">
+        <div class="help-nav-item active" onclick="helpSection('general')">🏠 Introducere</div>
+        <div class="help-nav-item" onclick="helpSection('pc')">🧮 Program Calcul</div>
+        <div class="help-nav-item" onclick="helpSection('retete')">🧾 Rețete Piesă</div>
+        <div class="help-nav-item" onclick="helpSection('cen')">📋 Centralizator</div>
+        <div class="help-nav-item" onclick="helpSection('dash')">📊 Dashboard</div>
+        <div class="help-nav-item" onclick="helpSection('utilaje')">⚙️ Utilaje</div>
+        <div class="help-nav-item" onclick="helpSection('sablon')">📌 Șablon Utilaje/FM</div>
+        <div class="help-nav-item" onclick="helpSection('salvare')">💾 Salvare & BD</div>
+        <div class="help-nav-item" onclick="helpSection('import')">📥 Import / Export</div>
+        <div class="help-nav-item" onclick="helpSection('shortcuts')">⌨️ Scurtături</div>
+      </div>
+      <!-- Conținut -->
+      <div class="help-content">
+
+        <!-- GENERAL -->
+        <div class="help-sec active" id="help-general">
+          <h2>🏠 Introducere — Ce face acest program?</h2>
+          <p>Programul calculează costul de material și producție pentru oferte de piese tehnice (garnituri, profile, benzi adezive etc.), organizate pe articole. Fiecare articol are parametri geometrici, material, utilaj și coeficienți economici.</p>
+          <h3>📑 Structura programului</h3>
+          <table class="help-tbl">
+            <tr><th>Tab</th><th>Rol</th></tr>
+            <tr><td>🧮 Program Calcul</td><td>Introducere parametri piesă și calcul cost material per piesă</td></tr>
+            <tr><td>🧾 Rețetă Piesă</td><td>Calcul detaliat cost producție: manoperă, utilaje, profit, transport</td></tr>
+            <tr><td>📋 Centralizator</td><td>Rezumat toate articolele cu prețul final per piesă</td></tr>
+            <tr><td>📊 Dashboard</td><td>Grafice comparative între articole</td></tr>
+            <tr><td>⚙️ Utilaje</td><td>Parametri și costuri utilaje de producție</td></tr>
+            <tr><td>📚 Referințe</td><td>Formule, factori FM, tabele de referință</td></tr>
+          </table>
+          <div class="help-tip">💡 <b>Flux de lucru recomandat:</b> Completați <b>Program Calcul</b> → ajustați <b>Rețete Piesă</b> → verificați <b>Centralizator</b> → <b>Salvați</b> oferta → <b>Export Excel</b>.</div>
+          <h3>🎨 Codul de culori în tabele</h3>
+          <ul>
+            <li><span class="help-badge hb-green">Verde</span> — câmp editabil direct</li>
+            <li><span class="help-badge hb-yellow">Galben</span> — dropdown / selecție</li>
+            <li><span class="help-badge hb-gray">Gri</span> — valoare calculată automat (nu se editează)</li>
+            <li><span class="help-badge hb-orange">Portocaliu</span> — preț final</li>
+          </ul>
+        </div>
+
+        <!-- PROGRAM CALCUL -->
+        <div class="help-sec" id="help-pc">
+          <h2>🧮 Program Calcul — Calcul Cost Material</h2>
+          <p>Fiecare rând reprezintă un articol (piesă). Calculul se face în timp real la orice modificare.</p>
+          <h3>➕ Adăugare / ștergere articole</h3>
+          <ul>
+            <li><b>＋ Articol nou</b> — adaugă un rând gol</li>
+            <li><b>⊙ Clonare</b> — duplică un articol existent ca bază de pornire</li>
+            <li><b>✕ Ștergere</b> — șterge articolul; celelalte se renumerotează automat</li>
+          </ul>
+          <h3>📐 Câmpuri principale</h3>
+          <table class="help-tbl">
+            <tr><th>Câmp</th><th>Descriere</th></tr>
+            <tr><td>PRJ / Client / OEM</td><td>Date identificare proiect</td></tr>
+            <tr><td>SOP</td><td>Anul Start of Production</td></tr>
+            <tr><td>Denumire</td><td>Numele piesei / articolului</td></tr>
+            <tr><td>Set</td><td>DA = calcul per set; NU = calcul per piesă</td></tr>
+            <tr><td>EYV</td><td>Volumul anual estimat (buc/an)</td></tr>
+            <tr><td>MOQ</td><td>Cantitatea minimă de comandă</td></tr>
+            <tr><td>Utilaj</td><td>Mașina de producție folosită</td></tr>
+            <tr><td>L / l / g</td><td>Lungime avansare / Lățime / Grosime piesă (mm)</td></tr>
+            <tr><td>Avans</td><td>Pasul de avansare la ștanțare (mm)</td></tr>
+            <tr><td>Pc/Av</td><td>Piese per avans</td></tr>
+            <tr><td>GapÎ / GapM</td><td>Joc între piese / Joc la margine (mm)</td></tr>
+            <tr><td>Mat1 / Mat2</td><td>Materialul 1 și Materialul 2 folosit</td></tr>
+            <tr><td>LatL / LunL</td><td>Lățimea / Lungimea logului de material (mm / m)</td></tr>
+            <tr><td>€/m²</td><td>Prețul materialului per metru pătrat</td></tr>
+            <tr><td>Sel.FM</td><td>Factorul de multiplicare preț (metodă veche)</td></tr>
+            <tr><td>NPD</td><td>Cost New Product Development (€)</td></tr>
+            <tr><td>Prod%</td><td>Factor productivitate anuală (%)</td></tr>
+          </table>
+          <div class="help-tip">💡 Câmpurile <b>SfEYV, VlEYV, LUtilă, Cost/p</b> etc. sunt calculate automat — nu se editează.</div>
+          <h3>🔒 Restrângere panou ofertă</h3>
+          <p>Faceți click pe bara <b>📄 Informații Ofertă</b> pentru a o colapsa și a câștiga spațiu vizual în tabel.</p>
+        </div>
+
+        <!-- RETETE -->
+        <div class="help-sec" id="help-retete">
+          <h2>🧾 Rețetă Piesă — Calcul Cost Producție</h2>
+          <p>Fiecare articol din Program Calcul are o rețetă proprie. Click pe articol pentru a-l extinde.</p>
+          <h3>💰 Câmpuri economice (introduse ca %)</h3>
+          <table class="help-tbl">
+            <tr><th>Câmp</th><th>Semnificație</th><th>Exemplu</th></tr>
+            <tr><td>CPM %</td><td>Cost Procese Metodă (%)</td><td>Scrieți <b>5</b> pentru 5%</td></tr>
+            <tr><td>CAM %</td><td>Cost Administrare Metodă</td><td>Scrieți <b>2.5</b> pentru 2.5%</td></tr>
+            <tr><td>CI %</td><td>Costuri Indirecte</td><td>Scrieți <b>25</b> pentru 25%</td></tr>
+            <tr><td>Profit %</td><td>Marja de profit</td><td>Scrieți <b>20</b> pentru 20%</td></tr>
+            <tr><td>SCRAP %</td><td>Procent rebut material</td><td>Scrieți <b>3</b> pentru 3%</td></tr>
+          </table>
+          <h3>📦 Secțiunea Materiale</h3>
+          <ul>
+            <li>Rândul 1 — materialul principal calculat din Program Calcul</li>
+            <li>Rândurile 2–5 — materiale suplimentare (adăugați cantitate + preț)</li>
+            <li><b>Dezvoltare Tool</b> — cost distribuit per piesă pe 4×MOQ</li>
+            <li><b>TOTAL MPI</b> — suma tuturor materialelor + Dezv.Tool</li>
+          </ul>
+          <h3>⚙️ Utilaje Producție</h3>
+          <p><b>Utilaj 1</b> se sincronizează automat cu câmpul Utilaj din Program Calcul. Modificarea în oricare tab o actualizează și pe cealaltă. Utilajele 2–5 sunt independente.</p>
+          <h3>📊 Rezultate Cost</h3>
+          <p>Valorile sunt calculate în lanț: MPI → MS (cu SCRAP) → CPM → CI → Cost Producție → Profit → <b>Preț Met.Nouă €/p</b>.</p>
+        </div>
+
+        <!-- CENTRALIZATOR -->
+        <div class="help-sec" id="help-cen">
+          <h2>📋 Centralizator — Rezumat Ofertă</h2>
+          <p>Afișează toate articolele cu prețul final calculat prin Metoda Nouă și Metoda Veche (FM).</p>
+          <table class="help-tbl">
+            <tr><th>Coloană</th><th>Descriere</th></tr>
+            <tr><td>Cost Prod €/p</td><td>Cost total producție (fără profit)</td></tr>
+            <tr><td>Preț Met.Nouă €/p</td><td>Prețul final calculat prin metoda nouă (Cost + Profit)</td></tr>
+            <tr><td>×1000 €</td><td>Prețul pentru 1000 piese</td></tr>
+            <tr><td>Preț Met.Veche</td><td>Cost material × factor FM</td></tr>
+          </table>
+          <div class="help-tip">💡 Butonul <b>🖨 Print</b> din header tipărește direct centralizatorul.</div>
+        </div>
+
+        <!-- DASHBOARD -->
+        <div class="help-sec" id="help-dash">
+          <h2>📊 Dashboard — Vizualizare Grafică</h2>
+          <p>Grafice generate automat pe baza tuturor articolelor introduse.</p>
+          <ul>
+            <li><b>Prețuri per Articol</b> — comparație bar chart Cost Producție vs Preț Met.Nouă vs Preț Met.Veche</li>
+            <li><b>Defalcare Cost</b> — pie chart cu structura costului pentru articolul selectat</li>
+            <li><b>Evoluție</b> — line chart cu evoluția prețurilor</li>
+            <li><b>Comparație radar</b> — vizualizare multi-dimensională</li>
+          </ul>
+          <div class="help-tip">💡 Selectați un articol din dropdown-ul de lângă graficul Pie pentru a vedea defalcarea sa specifică.</div>
+        </div>
+
+        <!-- UTILAJE -->
+        <div class="help-sec" id="help-utilaje">
+          <h2>⚙️ Utilaje — Parametri și Costuri</h2>
+          <p>Definește utilajele disponibile cu parametrii tehnici și economici.</p>
+          <table class="help-tbl">
+            <tr><th>Parametru</th><th>Descriere</th></tr>
+            <tr><td>Putere (kW)</td><td>Puterea electrică instalată</td></tr>
+            <tr><td>Energie (€/kWh)</td><td>Costul energiei electrice</td></tr>
+            <tr><td>Op.Tip1/2/3</td><td>Nr. operatori de fiecare tip pe utilaj</td></tr>
+            <tr><td>Timp/p (s)</td><td>Timpul de ciclu per piesă în secunde</td></tr>
+            <tr><td>Cost/s</td><td>Calculat automat: Putere × Energie / 3600</td></tr>
+            <tr><td>Cost/p</td><td>Calculat automat: Cost/s × Timp/p</td></tr>
+          </table>
+          <div class="help-warn">⚠ Modificările la utilaje afectează <b>toate</b> articolele care folosesc utilajul respectiv. Apăsați <b>💾 Salvează</b> după modificare.</div>
+          <h3>📌 Șablon Utilaje și FM</h3>
+          <p>Butonul <b>📌 Salvează ca Șablon</b> (disponibil în tabul Utilaje și în Referințe → FM) salvează un instantaneu complet al parametrilor curenți de utilaje și factorilor FM. Șablonul este stocat local în browser și poate fi actualizat oricând.</p>
+          <div class="help-tip">💡 Același buton <b>📌 Salvează ca Șablon</b> apare și în tabul <b>📚 Referințe</b>, secțiunea Factori FM.</div>
+        </div>
+
+        <!-- SABLON -->
+        <div class="help-sec" id="help-sablon">
+          <h2>📌 Șablon Utilaje și Referințe FM</h2>
+          <p>Șablonul este un set de referință cu parametrii de utilaje și factori FM pe care îl definiți o singură dată și îl folosiți ca punct de pornire pentru ofertele noi.</p>
+          <h3>Cum salvez un șablon?</h3>
+          <ul>
+            <li>Mergeți la tabul <b>⚙️ Utilaje</b> și configurați parametrii</li>
+            <li>Mergeți la tabul <b>📚 Referințe</b> și ajustați factorii FM</li>
+            <li>Apăsați <b>📌 Salvează ca Șablon</b> (disponibil în ambele taburi)</li>
+            <li>Data și ora salvării sunt afișate lângă buton</li>
+          </ul>
+          <h3>Cum folosesc șablonul?</h3>
+          <ul>
+            <li>Apăsați <b>➕ Ofertă Nouă</b></li>
+            <li>Alegeți <b>📌 Din Șablon</b> — se restaurează utilajele și FM-ul exact ca la momentul salvării</li>
+            <li>Alternativ, alegeți <b>📂 Din Proiect Existent</b> pentru a prelua referințele dintr-un proiect anterior</li>
+          </ul>
+          <h3>Când actualizez șablonul?</h3>
+          <p>Ori de câte ori modificați prețul energiei, adăugați utilaje noi sau ajustați factorii FM pentru lucrul curent. Șablonul nu afectează proiectele deja salvate.</p>
+          <div class="help-warn">⚠ Șablonul este stocat în browser (localStorage). Dacă ștergeți datele browserului, șablonul se pierde. Exportați BD regulat pentru backup complet.</div>
+        </div>
+
+        <!-- SALVARE -->
+        <div class="help-sec" id="help-salvare">
+          <h2>💾 Salvare și Gestionare Oferte</h2>
+          <h3>📁 Selectarea folderului de salvare</h3>
+          <p>La prima utilizare apăsați <b>📁 Selectează Folder</b> și alegeți folderul unde se află <code>Calcul_Oferta.html</code>. Folderul este reținut automat. Dacă browserul este repornit, apăsați <b>🔓 Reconfirmă accesul</b> din bannerul galben.</p>
+          <h3>➕ Ofertă Nouă</h3>
+          <p>La apăsarea butonului <b>➕ Ofertă Nouă</b> apare un dialog cu două opțiuni:</p>
+          <ul>
+            <li><b>📌 Din Șablon</b> — pornește cu parametrii de utilaje și FM salvați în șablon (recomandat pentru lucru standard)</li>
+            <li><b>📂 Din Proiect Existent</b> — alege un proiect salvat și preia utilajele și FM-ul lui; articolele nu se copiază</li>
+          </ul>
+          <div class="help-tip">💡 Salvați mai întâi un șablon din tabul <b>⚙️ Utilaje</b> → <b>📌 Salvează ca Șablon</b> înainte de a crea oferte noi.</div>
+          <h3>💾 Salvarea unei oferte</h3>
+          <ul>
+            <li>Completați <b>Denumire Ofertă</b> și <b>Nr. Proiect</b></li>
+            <li>Apăsați <b>💾 Salvează Ofertă</b> sau <span class="help-kbd">Ctrl+S</span></li>
+            <li>La fiecare salvare se creează o versiune nouă (v1, v2, v3...)</li>
+            <li>Fiecare versiune salvează și utilajele + FM-ul exact din acel moment</li>
+          </ul>
+          <h3>📂 Încărcarea unei oferte</h3>
+          <ul>
+            <li>Apăsați <b>📂 Încarcă Proiect</b></li>
+            <li>Filtrați după Nr. Proiect, Versiune sau Dată</li>
+            <li>Click pe versiunea dorită → se încarcă complet</li>
+          </ul>
+          <h3>🗄️ Baza de date</h3>
+          <p>Toate ofertele sunt stocate local în browser (localStorage). Folosiți <b>⬆ Export BD (JSON)</b> pentru backup și <b>📥 Import BD</b> pentru restaurare.</p>
+          <div class="help-warn">⚠ Ștergerea datelor de browser șterge și baza de date! Faceți backup regulat cu Export BD.</div>
+        </div>
+
+        <!-- IMPORT/EXPORT -->
+        <div class="help-sec" id="help-import">
+          <h2>📥 Import / Export</h2>
+          <h3>📊 Export Excel</h3>
+          <p>Butonul <b>📊 Export Excel</b> generează un fișier .xlsx cu 4 sheet-uri: Program Calcul, Rețete, Centralizator, Utilaje. Fișierul se salvează automat în folderul selectat.</p>
+          <h3>📥 Import Ofertă Veche (format PRJM Export)</h3>
+          <p>Permite importul articolelor din fișiere xlsx în formatul vechi de export.</p>
+          <ul>
+            <li>Apăsați <b>📥 Import Ofertă Veche</b></li>
+            <li>Selectați fișierul xlsx</li>
+            <li>Verificați previzualizarea articolelor detectate</li>
+            <li>Alegeți <b>Adaugă la existente</b> sau <b>Înlocuiește tot</b></li>
+            <li>Apăsați <b>✅ Importă</b></li>
+          </ul>
+          <div class="help-tip">💡 Câmpurile calculate (Cost/p, Preț/p etc.) se recalculează automat după import.</div>
+          <h3>⬆ Export BD (JSON)</h3>
+          <p>Exportă întreaga bază de date cu toate ofertele și versiunile ca fișier JSON. Folosiți pentru backup sau transfer pe alt calculator.</p>
+        </div>
+
+        <!-- SHORTCUTS -->
+        <div class="help-sec" id="help-shortcuts">
+          <h2>⌨️ Scurtături Tastatură</h2>
+          <table class="help-tbl">
+            <tr><th>Combinație</th><th>Acțiune</th></tr>
+            <tr><td><span class="help-kbd">Ctrl+S</span></td><td>Salvează oferta curentă</td></tr>
+            <tr><td><span class="help-kbd">F1</span></td><td>Deschide / închide acest Help</td></tr>
+          </table>
+          <h3>💡 Sfaturi rapide</h3>
+          <ul>
+            <li>Click pe bara <b>📄 Informații Ofertă</b> → colapsează / extinde panoul</li>
+            <li>Click pe un articol în Rețete → extinde / colapsează detaliile</li>
+            <li>Câmpurile pe <span class="help-badge hb-gray">gri</span> sunt calculate — nu le editați manual</li>
+            <li>Modificările se salvează automat în localStorage la fiecare schimbare</li>
+            <li>Utilizați <b>⊙ Clonare</b> pentru articole similare — economisiți timp</li>
+            <li>Procentele CPM%, CI%, Profit%, SCRAP% se introduc ca numere întregi (ex: <b>20</b> pentru 20%)</li>
+          </ul>
+        </div>
+
+      </div><!-- /help-content -->
+    </div><!-- /help-body -->
+  </div>
+</div>
+
+<!-- MODAL LOAD -->
+
+<!-- MODAL OFERTĂ NOUĂ -->
+<div class="mbg" id="newOfferModal">
+  <div class="mbox" style="max-width:520px">
+    <h3>📄 Ofertă Nouă — Referințe și Utilaje</h3>
+    <p style="color:var(--muted);font-size:.85em;margin:8px 0 16px">Alegeți valorile de pornire pentru utilaje și factorii FM:</p>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
+      <button class="btn btn-green" onclick="newOfferFromSablon()" id="btnSablon" style="padding:12px 20px;font-size:.95em;text-align:left">
+        📌 <b>Din Șablon</b>
+        <span id="sablonBtnInfo" style="font-size:.8em;font-weight:400;color:#c8ffc8;display:block;margin-top:2px"></span>
+      </button>
+      <button class="btn btn-blue" onclick="newOfferFromProject()" style="padding:12px 20px;font-size:.95em;text-align:left">
+        📂 <b>Din Proiect Existent</b>
+        <span style="font-size:.8em;font-weight:400;display:block;margin-top:2px;opacity:.8">Alege un proiect salvat și preia utilajele și FM-ul lui</span>
+      </button>
+    </div>
+    <div style="text-align:right">
+      <button class="btn" onclick="closeNewOfferModal()">Anulează</button>
+    </div>
+  </div>
+</div>
+<div class="mbg" id="loadModal">
+  <div class="mbox">
+    <h3>📂 Încarcă Proiect din Baza de Date</h3>
+    <div class="frow">
+      <div class="fl"><label>Filtru Nr. Proiect / Denumire</label>
+        <input id="fPrj" type="text" placeholder="ex: 2653 sau PIEGA" oninput="filterVers()"></div>
+      <div class="fl"><label>Filtru Versiune</label>
+        <input id="fVer" type="number" min="1" placeholder="ex: 2" oninput="filterVers()"></div>
+      <div class="fl"><label>Filtru Dată</label>
+        <input id="fData" type="date" oninput="filterVers()"></div>
+      <button class="btn btn-ghost btn-sm" onclick="clearFilters()">✕ Resetează</button>
+    </div>
+    <div id="versList"></div>
+    <div class="mbtns">
+      <label class="btn btn-amber btn-sm" style="cursor:pointer">
+        📥 Import BD (JSON)<input type="file" accept=".json" onchange="importDBFile(this)" style="display:none">
+      </label>
+      <button class="btn btn-ghost btn-sm" onclick="closeLoadModal()">✕ Închide</button>
+    </div>
+  </div>
+</div>
+<!-- MODAL CONFIRM -->
+<div class="mbg" id="confirmModal">
+  <div class="mbox sm">
+    <h3 id="confirmTitle">Confirmare</h3>
+    <p id="confirmMsg" style="font-size:.85em;color:var(--muted);margin-bottom:12px"></p>
+    <div class="mbtns">
+      <button class="btn btn-ghost btn-sm" onclick="confirmResolve(false)">Anulează</button>
+      <button class="btn btn-red btn-sm" onclick="confirmResolve(true)">Confirmă</button>
+    </div>
+  </div>
+</div>
+<!-- MODAL FOLDER BROWSER -->
+<div class="mbg" id="folderModal">
+  <div class="mbox" style="max-width:680px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div>
+        <h3 style="margin:0;font-size:1em">📂 Fișiere din folder</h3>
+        <div id="folderModalPath" style="font-size:.75em;color:var(--muted);margin-top:3px"></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('folderModal').classList.remove('on')">✕ Închide</button>
+    </div>
+    <div style="margin-bottom:10px;display:flex;gap:8px;align-items:center">
+      <input id="folderSearch" type="text" placeholder="🔍 Filtrează fișiere..." oninput="filterFolderFiles()"
+        style="flex:1;padding:5px 9px;border:1.5px solid var(--border);border-radius:var(--r);font-size:.8em">
+      <select id="folderFilter" onchange="filterFolderFiles()"
+        style="padding:5px 8px;border:1.5px solid var(--border);border-radius:var(--r);font-size:.8em;background:#fff">
+        <option value="">Toate</option>
+        <option value=".xlsx">Excel (.xlsx)</option>
+        <option value=".json">JSON (.json)</option>
+      </select>
+    </div>
+    <div id="folderFileList" style="max-height:55vh;overflow-y:auto;border:1.5px solid var(--border);border-radius:var(--r)"></div>
+    <div style="margin-top:10px;font-size:.72em;color:var(--muted)">
+      💡 Click pe un fișier Excel sau JSON pentru a-l descărca / deschide.
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+<script>
+// ═══ DATE REFERINȚĂ ═══
+let utilajeDB=[
+  {name:'Empty',putere:0,energie:.5,op1:0,op2:0,op3:0,timp:0},
+  {name:'AS 1300',putere:5,energie:.5,op1:2,op2:.2,op3:0,timp:5},
+  {name:'CQT 500-1',putere:2,energie:.5,op1:1,op2:0,op3:0,timp:2},
+  {name:'CQT 500-2',putere:2,energie:.5,op1:1,op2:0,op3:0,timp:2},
+  {name:'CQT 500-3',putere:2,energie:.5,op1:1,op2:0,op3:0,timp:2},
+  {name:'CQT 700',putere:2,energie:.5,op1:1,op2:0,op3:0,timp:2},
+  {name:'DTH 620',putere:2,energie:.5,op1:1,op2:0,op3:0,timp:3},
+  {name:'F400-1',putere:3,energie:.5,op1:1,op2:.2,op3:0,timp:20},
+  {name:'F400-2',putere:3,energie:.5,op1:1,op2:0,op3:0,timp:20},
+  {name:'F400-3',putere:3,energie:.5,op1:1,op2:0,op3:0,timp:20},
+  {name:'F400-4',putere:3,energie:.5,op1:1,op2:0,op3:0,timp:20},
+  {name:'FE-95',putere:2,energie:.5,op1:2,op2:0,op3:0,timp:10},
+  {name:'FE-95-2',putere:2,energie:.5,op1:2,op2:0,op3:0,timp:10},
+  {name:'GD 151 EL',putere:2,energie:.5,op1:1,op2:0,op3:0,timp:3},
+  {name:'GD 301',putere:2,energie:.5,op1:1,op2:0,op3:0,timp:3},
+  {name:'GD 301 EL - 1',putere:2,energie:.5,op1:1,op2:0,op3:0,timp:3},
+  {name:'GD 301 EL - 2',putere:2,energie:.5,op1:1,op2:0,op3:0,timp:3},
+  {name:'GD 654',putere:2,energie:.5,op1:1,op2:0,op3:0,timp:3},
+  {name:'GD RO 250',putere:2,energie:.5,op1:1,op2:0,op3:0,timp:3},
+  {name:'GD RO 250 EL',putere:2,energie:.5,op1:1,op2:0,op3:0,timp:3},
+  {name:'GD RO 350 LASER',putere:3,energie:.5,op1:1,op2:0,op3:0,timp:5},
+  {name:'GD RO 350-1',putere:3,energie:.5,op1:1,op2:0,op3:0,timp:3},
+  {name:'GD RO 350-2',putere:3,energie:.5,op1:1,op2:0,op3:0,timp:3},
+  {name:'GD RO 350-3',putere:3,energie:.5,op1:1,op2:0,op3:0,timp:3},
+  {name:'GD RO 350-4',putere:3,energie:.5,op1:1,op2:0,op3:0,timp:3},
+  {name:'GD-FFC',putere:3,energie:.5,op1:1,op2:0,op3:0,timp:22},
+  {name:'KT-MQ-1800',putere:10,energie:.5,op1:2,op2:0,op3:0,timp:3},
+  {name:'KUNTAI KT-QS',putere:10,energie:.5,op1:2,op2:0,op3:0,timp:3},
+  {name:'MQ 1250',putere:20,energie:.5,op1:2,op2:0,op3:0,timp:5},
+  {name:'PRINT 6330-1',putere:2,energie:.5,op1:1,op2:0,op3:0,timp:2},
+  {name:'RUBIK',putere:2,energie:.5,op1:1,op2:0,op3:0,timp:22},
+  {name:'ZUND',putere:10,energie:.5,op1:1,op2:0,op3:.4,timp:22},
+  {name:'ZUND G3',putere:10,energie:.5,op1:1,op2:0,op3:.4,timp:22},
+  {name:'GD X1',putere:11,energie:.5,op1:1,op2:0,op3:0,timp:3},
+  {name:'Manufactura',putere:0,energie:.5,op1:2,op2:0,op3:0,timp:10},
+];
+
+// FM editabil — stochează {key, label, val, desc, special}
+let fmDB=[
+  {key:'DeLonghi RO', val:1.90, desc:'Producție locală'},
+  {key:'DeLonghi IT', val:2.20, desc:'Export Italia'},
+  {key:'Auto',        val:2.30, desc:'Sector auto standard'},
+  {key:'Auto Export', val:2.50, desc:'Sector auto export'},
+  {key:'NON Auto',    val:2.70, desc:'Sectoare non-auto'},
+  {key:'<10€/1000 Buc', val:null, desc:'Preț special: Cost/p + 0.01€', special:true},
+  {key:'Role',        val:1.76, desc:'Produse în rolă'},
+  {key:'Custom',      val:5.00, desc:'Factor personalizat'},
+  {key:'Custom 2',    val:10.00, desc:'Factor personalizat 2'},
+];
+function getFM(k){return fmDB.find(x=>x.key===k);}
+function getFMVal(k){const e=getFM(k);return e?e.val:null;}
+
+// ═══ STATE ═══
+let articles=[], nextId=1, charts={}, saveTimer=null, isDirty=false;
+let offer={id:null,denumire:'',data:'',proiect:'',versiune:null,savedAt:null};
+let saveDir=null; // FileSystem Directory Handle
+let templateId=null; // id articol sursă pentru clonare (null = ultimul)
+
+const DB_KEY='calcul_oferta_db_v2', CUR_KEY='calcul_oferta_cur_v2';
+function today(){return new Date().toISOString().split('T')[0];}
+
+function newArtObj(ov){
+  const id=nextId++;
+  return Object.assign({
+    id,cod:'ART'+String(id).padStart(2,'0'),
+    prj:'',client:'',oem:'',proiect:'',sop:'',denumire:'',
+    set:'NU',nrps:1,eyv:17000,moq:10000,utilajPC:'CQT 500-1',
+    lung:34,lat:74,gros:.5,avans:54,nrpa:1,gapI:0,gapM:2,frot:1,
+    mde2:'',matf:'',latL:300,lunL:50,pm1:7,pm2:0,pm3:0,pm4:0,pretm2:7,selFM:'Auto',npd:0,prod:3,
+    cpm:0,cam:.025,ci:.25,profit:.2,op1r:7,op2r:9,op3r:12,
+    scrap:.03,transp:0,energie:.5,gdif:1,tset:40,
+    utilR:['CQT 500-1','Empty','Empty','Empty','Empty'],
+    mat:[{d:'',c:null,u:'buc',p:0},{d:'Material 2',c:null,u:'buc',p:0},
+         {d:'Material 3',c:null,u:'buc',p:0},{d:'Material 4',c:null,u:'buc',p:0},
+         {d:'Material 5',c:null,u:'buc',p:0}],
+    toolDev:0,
+  },ov||{});
+}
+
+// ═══ CALCULE ═══
+function ceilTo(v,f){return f>0?Math.ceil(v/f)*f:v;}
+function gU(n){return utilajeDB.find(u=>u.name===n)||utilajeDB[0];}
+
+function cPC(a){
+  const M=+a.lung||0,N=+a.lat||0,O=+a.gros||0;
+  const P=+a.avans||1,Q=+a.nrpa||1,R=+a.gapI||0,S=+a.gapM||0,V=+a.frot||1;
+  const I=+a.nrps||1,J=+a.eyv||1,Z=+a.latL||0,AA=+a.lunL||0;
+  const pmSum=(+a.pm1||0)+(+a.pm2||0)+(+a.pm3||0)+(+a.pm4||0);
+  const AB=pmSum>0?pmSum:(+a.pretm2||0);
+  const da=a.set==='DA';
+  const sEYV=da?M*N*J/1e6*I:M*N*J/1e6;
+  const vEYV=da?O*N*M*J/1e9*I:O*N*M*J/1e9;
+  const lU=ceilTo(N*Q+(Q-1)*R+2*S,V);
+  const pLog=AA*1000*Z/1e6*AB;
+  const nRo=lU>0?Math.floor(Z/lU):0;
+  const pLat=Z-lU*nRo;
+  const pcRo=P>0?Math.floor(AA*1000/P*Q):0;
+  const pcLog=pcRo*nRo;
+  const costP=pcLog>0?pLog/pcLog:0;
+  const costS=da?costP*I:null;
+  const fe=getFM(a.selFM);
+  const fv=fe?fe.val:null;
+  const fmd=fv!=null?fv:(a.selFM==='<10€/1000 Buc'?'N/A':'?');
+  const pretP=a.selFM==='<10€/1000 Buc'?costP+.01:(fv!=null?costP*fv:0);
+  const pretS=da?pretP*I:null;
+  return{sEYV,vEYV,lU,pLog,nRo,pLat,pcRo,pcLog,costP,costS,fmd,pretP,pretS};
+}
+
+function cRet(a){
+  const pc=cPC(a);
+  // MPI = material principal (din PC) + suma materiale suplimentare + Dezv.Tool/piesa
+  const matExtra=(a.mat||[]).slice(1).reduce((s,m)=>{
+    if(!m)return s;
+    const val=(!m.c||m.c===0)?(+(m.p)||0):((+(m.c)||0)*(+(m.p)||0));
+    return s+val;
+  },0);
+  const tdv=(+a.toolDev||0)/(4*Math.max(+a.moq||1,1));
+  const mpi=pc.costP+matExtra+tdv;
+  const ms=mpi*(1+(+a.scrap||0));
+  const cpmv=ms*(+a.cpm||0),mt=ms+cpmv;
+  const gf=a.gdif==2?1.3:a.gdif==3?1.6:1;
+  let cu=0,cm=0;
+  for(const n of(a.utilR||[])){
+    const u=gU(n);if(u.name==='Empty'||u.timp<=0)continue;
+    cu+=u.putere*(+a.energie||.5)/3600*u.timp*gf;
+    const ss=(+a.tset||0)*60/Math.max(+a.moq||1,1);
+    cm+=(u.op1*(+a.op1r||7)+u.op2*(+a.op2r||9)+u.op3*(+a.op3r||12))/3600*(u.timp+ss)*gf;
+  }
+  const camv=cm*(+a.cam||0);
+  const tv=(+a.moq||0)>0?(+a.transp||0)/Math.max(+a.moq||1,1):0;
+  const cd=mt+cu+cm+camv+tv,civ=cd*(+a.ci||0),cp=cd+civ;
+  const pv=cp*(+a.profit||0),tot=cp+pv;
+  return{mpi,ms,cpmv,mt,cu,cm,camv,tv,cd,civ,cp,pv,tot,x1k:tot*1000,pv2:pc.pretP,x1k2:pc.pretP*1000};
+}
+
+// ═══ FORMAT ═══
+const f4=v=>(v==null||isNaN(v))?'—':(+v).toFixed(4);
+const f2=v=>(v==null||isNaN(v))?'—':(+v).toFixed(2);
+const f6=v=>(v==null||isNaN(v))?'—':(+v).toFixed(6);
+const fi=v=>(v==null||isNaN(v))?'—':Math.round(v).toLocaleString('ro-RO');
+const fp=v=>(v==null||isNaN(v))?'—':((+v)*100).toFixed(1)+'%';
+const xe=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+// ═══ RENDER FM TABLE ═══
+function renderFM(){
+  document.getElementById('fmBody').innerHTML=fmDB.map((e,i)=>{
+    if(e.special) return`<tr style="background:#FFF3E0">
+      <td><b>${xe(e.key)}</b></td>
+      <td style="text-align:center;color:#888;font-style:italic">N/A (special)</td>
+      <td style="color:var(--muted)">${xe(e.desc)}</td></tr>`;
+    return`<tr>
+      <td><b>${xe(e.key)}</b></td>
+      <td style="text-align:center"><input type="number" step=".01" min="0" max="20"
+        value="${e.val}" style="width:80px;background:#FFF9C4;border:1.5px solid #FFD54F;border-radius:4px;padding:3px 6px;font-weight:700;font-size:.88em;text-align:center"
+        onchange="updFM(${i},+this.value)"></td>
+      <td style="color:var(--muted)">${xe(e.desc)}</td></tr>`;
+  }).join('');
+}
+
+function updFM(i,v){
+  fmDB[i].val=v;
+  recalcAll();
+  showToast('FM actualizat: '+fmDB[i].key+' = '+v,'ok');
+}
+
+// ═══ RENDER PC ═══
+const uO=s=>utilajeDB.map(u=>`<option value="${xe(u.name)}"${u.name===s?' selected':''}>${xe(u.name)}</option>`).join('');
+const fO=s=>fmDB.map(e=>`<option value="${xe(e.key)}"${e.key===s?' selected':''}>${xe(e.key)}</option>`).join('');
+
+function renderPC(){
+  document.getElementById('bodyPC').innerHTML=articles.map((a,i)=>{
+    const c=cPC(a),id=a.id;
+    const inp='background:#E2EFDA;border-color:#81C784';
+    const dd='background:#FFF2CC;border-color:#FFD54F';
+    const calc='background:#F2F2F2;color:#444';
+    const fin='background:#FCE4D6;color:#8B2500;font-weight:700';
+    const finBig='background:#FCE4D6;color:#8B2500;font-weight:900;font-size:1.7em';
+    const pm='background:#B2DFDB;border-color:#4DB6AC';
+    const pmt='background:#4DB6AC;color:#003731;font-weight:600';
+    const isTmpl=templateId===id;
+    return`<tr data-id="${id}"${isTmpl?' class="tmpl-row"':''}>
+<td class="tc" style="white-space:nowrap">
+  <button class="tsel${isTmpl?' on':''}" onclick="setTmpl(${id})" title="${isTmpl?'Deselectează sursa':'Selectează ca sursă pentru articol nou'}">⊙</button>
+  <span style="color:var(--muted)">${i+1}</span>
+</td>
+<td><input type="number" style="${inp}" value="${a.prj}" title="${a.prj}" oninput="updT(${id},'prj',this.value)"></td>
+<td><input type="text" style="${inp}" value="${xe(a.client)}" title="${xe(a.client)}" oninput="updT(${id},'client',this.value)"></td>
+<td><input type="text" style="${inp}" value="${xe(a.oem)}" title="${xe(a.oem)}" oninput="updT(${id},'oem',this.value)"></td>
+<td><input type="number" style="${inp}" value="${a.proiect}" title="${a.proiect}" oninput="updT(${id},'proiect',this.value)"></td>
+<td><input type="text" style="${inp}" value="${xe(a.sop)}" title="${xe(a.sop)}" oninput="updT(${id},'sop',this.value)"></td>
+<td><input type="text" style="${inp}" value="${xe(a.denumire)}" title="${xe(a.denumire)}" oninput="updT(${id},'denumire',this.value)"></td>
+<td><select style="${dd}" onchange="upd(${id},'set',this.value)"><option${a.set==='NU'?' selected':''}>NU</option><option${a.set==='DA'?' selected':''}>DA</option></select></td>
+<td><input type="number" style="${inp}" value="${a.nrps}" title="${a.nrps}" onchange="upd(${id},'nrps',+this.value)"></td>
+<td><input type="number" style="${inp}" value="${a.eyv}" title="${a.eyv}" onchange="upd(${id},'eyv',+this.value)"></td>
+<td><input type="number" style="${inp}" value="${a.moq}" title="${a.moq}" onchange="upd(${id},'moq',+this.value)"></td>
+<td><select style="${dd}" onchange="upd(${id},'utilajPC',this.value)">${uO(a.utilajPC)}</select></td>
+<td><input type="number" step=".1" style="${inp}" value="${a.lung}" title="${a.lung}" onchange="upd(${id},'lung',+this.value)"></td>
+<td><input type="number" step=".1" style="${inp}" value="${a.lat}" title="${a.lat}" onchange="upd(${id},'lat',+this.value)"></td>
+<td><input type="number" step=".01" style="${inp}" value="${a.gros}" title="${a.gros}" onchange="upd(${id},'gros',+this.value)"></td>
+<td><input type="number" style="${inp}" value="${a.avans}" title="${a.avans}" onchange="upd(${id},'avans',+this.value)"></td>
+<td><input type="number" style="${inp}" value="${a.nrpa}" title="${a.nrpa}" onchange="upd(${id},'nrpa',+this.value)"></td>
+<td><input type="number" style="${inp}" value="${a.gapI}" title="${a.gapI}" onchange="upd(${id},'gapI',+this.value)"></td>
+<td><input type="number" style="${inp}" value="${a.gapM}" title="${a.gapM}" onchange="upd(${id},'gapM',+this.value)"></td>
+<td style="${calc}" class="tn">${f4(c.sEYV)}</td>
+<td style="${calc}" class="tn">${f4(c.vEYV)}</td>
+<td><input type="number" style="${dd}" value="${a.frot}" title="${a.frot}" onchange="upd(${id},'frot',+this.value)"></td>
+<td style="${calc}" class="tn">${fi(c.lU)}</td>
+<td><input type="text" style="${dd}" value="${xe(a.mde2)}" title="${xe(a.mde2)}" oninput="updT(${id},'mde2',this.value)"></td>
+<td><input type="text" style="${dd}" value="${xe(a.matf)}" title="${xe(a.matf)}" oninput="updT(${id},'matf',this.value)"></td>
+<td><input type="number" style="${inp}" value="${a.latL}" title="${a.latL}" onchange="upd(${id},'latL',+this.value)"></td>
+<td><input type="number" step=".1" style="${inp}" value="${a.lunL}" title="${a.lunL}" onchange="upd(${id},'lunL',+this.value)"></td>
+<td><input type="number" step=".01" style="${pm}" value="${a.pm1}" title="${a.pm1}" onchange="upd(${id},'pm1',+this.value)"></td>
+<td><input type="number" step=".01" style="${pm}" value="${a.pm2}" title="${a.pm2}" onchange="upd(${id},'pm2',+this.value)"></td>
+<td><input type="number" step=".01" style="${pm}" value="${a.pm3}" title="${a.pm3}" onchange="upd(${id},'pm3',+this.value)"></td>
+<td><input type="number" step=".01" style="${pm}" value="${a.pm4||0}" title="${a.pm4||0}" onchange="upd(${id},'pm4',+this.value)"></td>
+<td style="${pmt}" class="tn">${f2((+a.pm1||0)+(+a.pm2||0)+(+a.pm3||0)+(+a.pm4||0)||(+a.pretm2||0))}</td>
+<td style="${calc}" class="tn">${f2(c.pLog)}</td>
+<td style="${calc}" class="tn">${fi(c.nRo)}</td>
+<td style="${calc}" class="tn">${fi(c.pLat)}</td>
+<td style="${calc}" class="tn">${fi(c.pcRo)}</td>
+<td style="${calc}" class="tn">${fi(c.pcLog)}</td>
+<td style="${calc}" class="tn">${f4(c.costP)}</td>
+<td style="${calc}" class="tn">${c.costS!=null?f4(c.costS):'—'}</td>
+<td><select style="${dd}" onchange="upd(${id},'selFM',this.value)">${fO(a.selFM)}</select></td>
+<td style="${calc};font-weight:700">${c.fmd}</td>
+<td style="${finBig}" class="tn">${f4(c.pretP)}</td>
+<td style="${fin}" class="tn">${c.pretS!=null?f4(c.pretS):'—'}</td>
+<td><input type="number" step=".01" style="${inp};font-size:1.35em;font-weight:900;text-align:center;height:28px;padding:0 3px;box-sizing:border-box" value="${a.npd}" title="${a.npd}" onchange="upd(${id},'npd',+this.value)"></td>
+<td><input type="number" step=".1" style="${inp}" value="${a.prod}" title="${a.prod}%" onchange="upd(${id},'prod',+this.value)"></td>
+<td><button class="del" onclick="delArt(${id})" title="Șterge">✕</button></td>
+</tr>`;
+  }).join('');
+  document.getElementById('artCnt').textContent=articles.length;
+  if(!document.getElementById('ofProiect').value&&articles.length>0&&articles[0].prj)
+    document.getElementById('ofProiect').value=articles[0].prj;
+  updateTmplInfo();
+  initTableResize();
+}
+
+// ═══ RENDER RETETA ═══
+function renderRet(){
+  const c=document.getElementById('retCont');
+  if(!articles.length){c.innerHTML='<p style="color:var(--muted);padding:20px">Nu există articole. Adăugați în Program Calcul.</p>';return;}
+  const openIds=new Set([...c.querySelectorAll('.abody.on')].map(e=>+e.id.replace('ab-','')));
+  c.innerHTML=articles.map(a=>retCard(a)).join('');
+  openIds.forEach(id=>{
+    const b=document.getElementById('ab-'+id),ar=document.getElementById('arr-'+id);
+    if(b){b.classList.add('on');if(ar)ar.textContent='▲';}
+  });
+}
+function retCard(a){
+  const r=cRet(a),c=cPC(a),id=a.id;
+  const sO=s=>utilajeDB.map(u=>`<option value="${xe(u.name)}"${(a.utilR||[])[s]===u.name?' selected':''}>${xe(u.name)}</option>`).join('');
+  const mRows=[1,2,3,4].map(mi=>{
+    const m=a.mat[mi]||{};
+    const val=(!m.c||m.c===0)?(m.p||0):((m.c||0)*(m.p||0));
+    return`<tr>
+<td>${mi+1}</td>
+<td><input class="inp" type="text" style="width:100%;min-width:90px" value="${xe(m.d||'')}" onchange="updM(${id},${mi},'d',this.value)"></td>
+<td><input class="inp" type="number" step=".001" style="width:60px" value="${m.c||''}" placeholder="—" onchange="updM(${id},${mi},'c',this.value===''?null:+this.value)"></td>
+<td><input class="inp" type="text" style="width:38px" value="${xe(m.u||'buc')}" onchange="updM(${id},${mi},'u',this.value)"></td>
+<td><input class="inp" type="number" step=".0001" style="width:64px" value="${m.p||0}" onchange="updM(${id},${mi},'p',+this.value)"></td>
+<td class="tc tn">${f4(val)}</td></tr>`;
+  }).join('');
+  return`<div class="acard" id="ac-${id}">
+<div class="ahdr" onclick="togCard(${id})">
+  <div><div class="atag">▶ ARTICOL ${articles.findIndex(x=>x.id===id)+1} — ${xe(a.cod)}</div>
+    <div class="asub">${xe(a.denumire||'(fără denumire)')}</div></div>
+  <div style="display:flex;align-items:center;gap:18px">
+    <div class="akpis">
+      <div class="akpi"><span>MPI</span><strong>${f4(r.mpi)} €</strong></div>
+      <div class="akpi"><span>Cost Prod.</span><strong>${f4(r.cp)} €</strong></div>
+      <div class="akpi hi"><span>Preț Met.Nouă</span><strong>${f4(r.tot)} €/p</strong></div>
+    </div>
+    <span id="arr-${id}" style="font-size:1.1em;opacity:.8">▼</span>
+  </div>
+</div>
+<div class="abody" id="ab-${id}">
+<div class="p2">
+  <div>
+    <div class="ph">📋 Parametri Generali</div>
+    <div class="pg">
+      <div class="pf"><label>Cod Articol</label><input class="inp" type="text" value="${xe(a.cod)}" onchange="upd(${id},'cod',this.value)"></div>
+      <div class="pf"><label>CPM %</label><input class="inp" type="number" step="0.1" min="0" max="100" value="${+(a.cpm*100).toFixed(2)}" onchange="upd(${id},'cpm',+this.value/100)"></div>
+      <div class="pf"><label>CAM %</label><input class="inp" type="number" step="0.1" min="0" max="100" value="${+(a.cam*100).toFixed(2)}" onchange="upd(${id},'cam',+this.value/100)"></div>
+      <div class="pf"><label>CI %</label><input class="inp" type="number" step="0.1" min="0" max="100" value="${+(a.ci*100).toFixed(2)}" onchange="upd(${id},'ci',+this.value/100)"></div>
+      <div class="pf"><label>Profit %</label><input class="inp" type="number" step="0.1" min="0" max="100" value="${+(a.profit*100).toFixed(2)}" onchange="upd(${id},'profit',+this.value/100)"></div>
+      <div class="pf"><label>SCRAP %</label><input class="inp" type="number" step="0.1" min="0" max="100" value="${+(a.scrap*100).toFixed(2)}" onchange="upd(${id},'scrap',+this.value/100)"></div>
+      <div class="pf"><label>MOQ (buc)</label><input class="inp" type="number" value="${a.moq}" onchange="upd(${id},'moq',+this.value)"></div>
+      <div class="pf"><label>Transport €/MOQ</label><input class="inp" type="number" step=".01" value="${a.transp}" onchange="upd(${id},'transp',+this.value)"></div>
+      <div class="pf"><label>Dezv.Tool €</label><input class="inp" type="number" step="1" value="${a.toolDev||0}" onchange="upd(${id},'toolDev',+this.value)"></div>
+    </div>
+  </div>
+  <div>
+    <div class="ph">⚙️ Parametri Producție</div>
+    <div class="pg">
+      <div class="pf"><label>Energie €/kWh</label><input class="inp" type="number" step=".01" value="${a.energie}" onchange="upd(${id},'energie',+this.value)"></div>
+      <div class="pf"><label>Grad Dificultate</label>
+        <select class="dd" onchange="upd(${id},'gdif',+this.value)">
+          <option value="1"${a.gdif==1?' selected':''}>1 — Normal</option>
+          <option value="2"${a.gdif==2?' selected':''}>2 — Mediu ×1.3</option>
+          <option value="3"${a.gdif==3?' selected':''}>3 — Dificil ×1.6</option>
+        </select></div>
+      <div class="pf"><label>Timp Setup min</label><input class="inp" type="number" value="${a.tset}" onchange="upd(${id},'tset',+this.value)"></div>
+      <div class="pf"><label>Op.Tip1 €/h</label><input class="inp" type="number" step=".5" value="${a.op1r}" onchange="upd(${id},'op1r',+this.value)"></div>
+      <div class="pf"><label>Op.Tip2 €/h</label><input class="inp" type="number" step=".5" value="${a.op2r}" onchange="upd(${id},'op2r',+this.value)"></div>
+      <div class="pf"><label>Op.Tip3 €/h</label><input class="inp" type="number" step=".5" value="${a.op3r}" onchange="upd(${id},'op3r',+this.value)"></div>
+    </div>
+    <div class="ph" style="margin-top:10px">🔧 Utilaje Producție</div>
+    <div class="pg">
+      ${[0,1,2,3,4].map(s=>`<div class="pf"><label>Utilaj ${s+1}</label><select class="dd" onchange="updUR(${id},${s},this.value)">${sO(s)}</select></div>`).join('')}
+    </div>
+  </div>
+</div>
+<div class="ph">📦 Materiale</div>
+<table class="mt" style="margin-bottom:12px">
+  <thead><tr><th style="width:26px">Nr</th><th>Denumire</th><th style="width:74px">Cantitate</th><th style="width:44px">UM</th><th style="width:80px">Preț €/UM</th><th style="width:80px">Val. €/p</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td class="tc" style="text-align:left">${xe(a.mat1||a.mde2||'Material 1 / Material 2 (din Program Calcul)')}</td>
+      <td class="tc">—</td><td class="tc">buc</td>
+      <td class="tc tn">${f4(c.costP)}</td><td class="tc tn">${f4(c.costP)}</td></tr>
+    ${mRows}
+    <tr><td colspan="5" style="font-style:italic;color:var(--muted)">Dezvoltare Tool (val./4×MOQ)</td>
+      <td class="tc tn">${f4(a.toolDev?a.toolDev/(4*Math.max(+a.moq||1,1)):0)}</td></tr>
+    <tr style="background:#E8F5E9;font-weight:700;border-top:2px solid #4CAF50">
+      <td colspan="5" style="text-align:right;padding:5px 8px;color:#2E7D32">▶ TOTAL MPI €/p</td>
+      <td class="tc tn" style="color:#1B5E20;font-size:1.05em">${f4(r.mpi)}</td></tr>
+  </tbody>
+</table>
+<div class="ph">📊 Rezultate Cost</div>
+<div class="rg">
+  <div class="rc"><div class="rl">MPI €/p</div><div class="rv">${f4(r.mpi)}</div></div>
+  <div class="rc"><div class="rl">Mat+SCRAP</div><div class="rv">${f4(r.ms)}</div></div>
+  <div class="rc"><div class="rl">CPM €/p</div><div class="rv">${f4(r.cpmv)}</div></div>
+  <div class="rc"><div class="rl">MatTotal</div><div class="rv">${f4(r.mt)}</div></div>
+  <div class="rc"><div class="rl">Utilaje €/p</div><div class="rv">${f4(r.cu)}</div></div>
+  <div class="rc"><div class="rl">Manoperă €/p</div><div class="rv">${f4(r.cm)}</div></div>
+  <div class="rc"><div class="rl">CAM €/p</div><div class="rv">${f4(r.camv)}</div></div>
+  <div class="rc"><div class="rl">Transport €/p</div><div class="rv">${f4(r.tv)}</div></div>
+  <div class="rc"><div class="rl">CD €/p</div><div class="rv">${f4(r.cd)}</div></div>
+  <div class="rc"><div class="rl">CI €/p</div><div class="rv">${f4(r.civ)}</div></div>
+  <div class="rc"><div class="rl">Cost Producție</div><div class="rv">${f4(r.cp)}</div></div>
+  <div class="rc"><div class="rl">Profit €/p</div><div class="rv">${f4(r.pv)}</div></div>
+  <div class="rc rf"><div class="rl">Preț Met.Nouă €/p</div><div class="rv">${f4(r.tot)}</div></div>
+  <div class="rc rf"><div class="rl">Preț Met.Nouă €/1000p</div><div class="rv">${f2(r.x1k)}</div></div>
+  <div class="rc rb"><div class="rl">Preț Met.Veche €/p</div><div class="rv">${f4(r.pv2)}</div></div>
+  <div class="rc rb"><div class="rl">Met.Veche €/1000p</div><div class="rv">${f2(r.x1k2)}</div></div>
+</div></div></div>`;
+}
+
+// ═══ RENDER CEN / UTL / DASH ═══
+function renderCen(){
+  const tb=document.getElementById('bodyCen');
+  if(!articles.length){tb.innerHTML='<tr><td colspan="19" class="no-data">Nu există articole.</td></tr>';renderChartCen();return;}
+  tb.innerHTML=articles.map((a,i)=>{
+    const r=cRet(a),c=cPC(a);
+    const pv=c.pretP;
+    const an1=+(pv*(1-0.03)).toFixed(4);
+    const an2=+(an1*(1-0.03)).toFixed(4);
+    const an3=+(an2*(1-0.03)).toFixed(4);
+    return`<tr>
+<td>${i+1}</td><td>${xe(a.cod)}</td><td style="text-align:left">${xe(a.denumire||'—')}</td>
+<td>${xe((a.utilR||[])[0]||a.utilajPC||'—')}</td>
+<td class="tn">${fi(a.moq)}</td>
+<td class="tn">${f2(+a.lung||0)}</td><td class="tn">${f2(+a.lat||0)}</td><td class="tn">${f2(+a.gros||0)}</td>
+<td class="tn">${xe(a.mde2||'—')}</td><td class="tn">${xe(a.matf||'—')}</td>
+<td class="tn tc" style="font-weight:600">${f4(r.cp)}</td>
+<td class="tn tf">${f4(r.tot)}</td><td class="tn tf">${f2(r.x1k)}</td>
+<td class="tn" style="background:#E3F2FD;color:#0D47A1;font-weight:900;font-size:1.7em">${f4(pv)}</td>
+<td class="tn" style="background:#E3F2FD;color:#0D47A1;font-weight:900;font-size:1.7em">${f2(pv*1000)}</td>
+<td class="tn" style="font-weight:900;font-size:1.7em">${fi(+a.npd||0)}</td><td class="tn" style="background:#E8F5E9;color:#1B5E20;font-weight:600">${f4(an1)}</td>
+<td class="tn" style="background:#C8E6C9;color:#1B5E20;font-weight:600">${f4(an2)}</td>
+<td class="tn" style="background:#A5D6A7;color:#1B5E20;font-weight:600">${f4(an3)}</td>
+</tr>`;
+  }).join('');
+  renderChartCen();
+}
+function renderUtl(){
+  document.getElementById('bodyUtl').innerHTML=utilajeDB.map((u,i)=>{
+    const cs=u.putere*u.energie/3600,cp=cs*u.timp;
+    return`<tr>
+<td>${i+1}</td><td style="text-align:left;font-weight:600;padding:4px 9px">${xe(u.name)}</td>
+<td><input class="inp" type="number" step=".5" style="width:60px" value="${u.putere}" onchange="updU(${i},'putere',+this.value)"></td>
+<td><input class="inp" type="number" step=".01" style="width:56px" value="${u.energie}" onchange="updU(${i},'energie',+this.value)"></td>
+<td><input class="inp" type="number" step=".1" style="width:53px" value="${u.op1}" onchange="updU(${i},'op1',+this.value)"></td>
+<td><input class="inp" type="number" step=".1" style="width:53px" value="${u.op2}" onchange="updU(${i},'op2',+this.value)"></td>
+<td><input class="inp" type="number" step=".1" style="width:53px" value="${u.op3}" onchange="updU(${i},'op3',+this.value)"></td>
+<td><input class="inp" type="number" step=".5" style="width:53px" value="${u.timp}" onchange="updU(${i},'timp',+this.value)"></td>
+<td class="tc tn">${f6(cs)}</td><td class="tc tn">${f6(cp)}</td></tr>`;
+  }).join('');
+}
+function renderDash(){
+  const kr=document.getElementById('krow');
+  if(!articles.length){kr.innerHTML='<p style="color:var(--muted);font-size:.82em">Adăugați articole pentru statistici.</p>';return;}
+  const vCP =articles.map(a=>cRet(a).cp).filter(v=>v>0);
+  const vTOT=articles.map(a=>cRet(a).tot).filter(v=>v>0);
+  const vMV =articles.map(a=>cPC(a).pretP).filter(v=>v>0);
+  const med=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+  kr.innerHTML=`
+<div class="kcard"><div class="kl">Total Articole</div><div class="kv">${articles.length}</div><div class="ks">din max 15</div></div>
+<div class="kcard kg"><div class="kl">Cost Prod. Mediu</div><div class="kv">${f4(med(vCP))} €/p</div><div class="ks">fără TVA / profit</div></div>
+<div class="kcard ko"><div class="kl">Preț Met.Nouă Mediu</div><div class="kv">${f4(med(vTOT))} €/p</div><div class="ks">cost + profit</div></div>
+<div class="kcard" style="border-left-color:#7B1FA2"><div class="kl">Preț Met.Veche Mediu</div><div class="kv">${f4(med(vMV))} €/p</div><div class="ks">cost × FM</div></div>
+<div class="kcard kg"><div class="kl">Preț Met.Nouă Min</div><div class="kv">${f4(vTOT.length?Math.min(...vTOT):0)} €/p</div><div class="ks">cel mai ieftin</div></div>
+<div class="kcard ka"><div class="kl">Preț Met.Nouă Max</div><div class="kv">${f4(vTOT.length?Math.max(...vTOT):0)} €/p</div><div class="ks">cel mai scump</div></div>
+${offer.versiune?`<div class="kcard" style="border-left-color:#1565C0"><div class="kl">Ofertă</div><div class="kv" style="font-size:.9em">${xe(offer.denumire)}</div><div class="ks">v${offer.versiune} — ${offer.data}</div></div>`:''}`;
+  renderBarChart();renderPie();renderLineChart();
+}
+function mkChart(id,type,data,opts){
+  if(charts[id]){charts[id].destroy();delete charts[id];}
+  const el=document.getElementById(id);if(!el||!articles.length)return;
+  charts[id]=new Chart(el.getContext('2d'),{type,data,options:{responsive:true,maintainAspectRatio:false,...opts}});
+}
+function renderBarChart(){
+  mkChart('cBar','bar',{
+    labels:articles.map(a=>a.cod),
+    datasets:[
+      {label:'Cost Prod. €/p',    data:articles.map(a=>+cRet(a).cp.toFixed(4)),   backgroundColor:'rgba(46,125,50,.75)', borderColor:'#2E7D32',borderWidth:1},
+      {label:'Preț Met.Nouă €/p',   data:articles.map(a=>+cRet(a).tot.toFixed(4)),  backgroundColor:'rgba(21,101,192,.8)', borderColor:'#1565C0',borderWidth:1},
+      {label:'Preț Met.Veche €/p',data:articles.map(a=>+cPC(a).pretP.toFixed(4)), backgroundColor:'rgba(123,31,162,.7)', borderColor:'#7B1FA2',borderWidth:1},
+    ]},{plugins:{legend:{labels:{font:{size:11},boxWidth:12}}},scales:{y:{beginAtZero:true,ticks:{font:{size:10}}}}});
+}
+function renderPie(){
+  const sel=document.getElementById('selPie');const cur=sel.value;
+  sel.innerHTML=articles.map(a=>`<option value="${a.id}">${xe(a.cod)}</option>`).join('');
+  if(cur)sel.value=cur;
+  const art=articles.find(a=>a.id===+sel.value)||articles[0];if(!art)return;
+  const r=cRet(art);
+  mkChart('cPie','doughnut',{
+    labels:['Material','Utilaje','Manoperă','CAM','Transport','CI','Profit'],
+    datasets:[{data:[r.mpi,r.cu,r.cm,r.camv,r.tv,r.civ,r.pv].map(v=>Math.max(0,+v.toFixed(6))),
+      backgroundColor:['#42A5F5','#66BB6A','#FFA726','#AB47BC','#26C6DA','#EC407A','#8D6E63'],borderWidth:1,borderColor:'#fff'}]
+  },{cutout:'55%',plugins:{legend:{position:'right',labels:{font:{size:10},boxWidth:10}}}});
+}
+function renderLineChart(){
+  mkChart('cLine','line',{
+    labels:articles.map(a=>a.cod),
+    datasets:[
+      {label:'Cost Prod. €/p',    data:articles.map(a=>+cRet(a).cp.toFixed(4)),   borderColor:'#2E7D32',backgroundColor:'rgba(46,125,50,.1)',tension:.35,fill:true, pointRadius:4,borderWidth:2},
+      {label:'Preț Met.Nouă €/p',   data:articles.map(a=>+cRet(a).tot.toFixed(4)),  borderColor:'#1565C0',fill:false,tension:.35,pointRadius:4,borderWidth:2},
+      {label:'Preț Met.Veche €/p',data:articles.map(a=>+cPC(a).pretP.toFixed(4)), borderColor:'#7B1FA2',fill:false,tension:.35,pointRadius:4,borderWidth:2,borderDash:[5,3]},
+    ]},{plugins:{legend:{labels:{font:{size:11},boxWidth:12}}},scales:{y:{beginAtZero:true,ticks:{font:{size:10}}}}});
+}
+function renderChartCen(){
+  if(charts.cCen){charts.cCen.destroy();delete charts.cCen;}
+  if(!articles.length)return;
+  charts.cCen=new Chart(document.getElementById('cCen').getContext('2d'),{
+    type:'bar',
+    data:{labels:articles.map(a=>a.cod+(a.denumire?' – '+a.denumire.slice(0,14):'')),
+      datasets:[
+        {label:'Cost Prod. €/p',    data:articles.map(a=>+cRet(a).cp.toFixed(4)),   backgroundColor:'rgba(46,125,50,.75)', borderColor:'#2E7D32',borderWidth:1},
+        {label:'Preț Met.Nouă €/p',   data:articles.map(a=>+cRet(a).tot.toFixed(4)),  backgroundColor:'rgba(21,101,192,.7)', borderColor:'#1565C0',borderWidth:1},
+        {label:'Preț Met.Veche €/p',data:articles.map(a=>+cPC(a).pretP.toFixed(4)), backgroundColor:'rgba(123,31,162,.7)', borderColor:'#7B1FA2',borderWidth:1},
+      ]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+      plugins:{legend:{labels:{font:{size:11},boxWidth:12}}},scales:{x:{beginAtZero:true,ticks:{font:{size:10}}}}}
+  });
+}
+
+// ═══ PRINT CENTRALIZATOR ═══
+function printCen(){
+  // Asigurăm că Centralizatorul este randat
+  renderCen();
+  setTimeout(()=>{
+    // Capturăm graficul ca imagine PNG
+    const canvas=document.getElementById('cCen');
+    const chartImg=canvas?canvas.toDataURL('image/png',1.0):null;
+
+    // Capturăm datele tabelului din DOM deja randat
+    const tbody=document.getElementById('bodyCen');
+    const rows=tbody?tbody.innerHTML:'';
+
+    // Info ofertă
+    const ofName=document.getElementById('ofName')?.value||offer.denumire||'—';
+    const ofDate=document.getElementById('ofDate')?.value||offer.data||'';
+    const ofProiect=document.getElementById('ofProiect')?.value||offer.proiect||'';
+    const ver=offer.versiune?`v${offer.versiune}`:'NOUĂ';
+    const genDate=new Date().toLocaleDateString('ro-RO');
+
+    const html=`<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<title>Centralizator — ${xe(ofName)}</title>
+<style>
+@page{size:A4 landscape;margin:10mm 12mm}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;font-size:10.5px;color:#1A2332;background:#fff}
+.ph{display:flex;align-items:flex-start;justify-content:space-between;
+  border-bottom:2.5px solid #1565C0;padding-bottom:7px;margin-bottom:10px}
+.pt{font-size:13px;font-weight:700;color:#1565C0;margin-bottom:2px}
+.ps{font-size:11px;color:#333}
+.pm{font-size:9.5px;color:#555;text-align:right;line-height:1.6}
+.pm b{color:#1A2332}
+table{width:100%;border-collapse:collapse;font-size:9.5px;margin-bottom:12px;table-layout:auto}
+thead tr th{background:#1565C0;color:#fff;padding:4px 5px;text-align:center;
+  font-size:9px;white-space:nowrap;border:1px solid #0D47A1}
+tbody tr td{padding:3px 5px;border:1px solid #d0d6e0;text-align:center;white-space:nowrap}
+tbody tr:nth-child(even) td{background:#F0F4FA}
+.tn{text-align:right;font-variant-numeric:tabular-nums}
+.tf{background:#DDEEFF!important;font-weight:700;color:#0D47A1}
+.td-name{text-align:left;max-width:130px;overflow:hidden;text-overflow:ellipsis}
+.cw{text-align:center;margin-top:4px}
+.cw img{max-width:100%;height:auto;max-height:230px;border:1px solid #ddd;border-radius:4px}
+.footer{margin-top:8px;font-size:8.5px;color:#aaa;text-align:right;border-top:1px solid #eee;padding-top:5px}
+</style>
+</head>
+<body>
+<div class="ph">
+  <div>
+    <div class="pt">📋 Centralizator Oferte — Rezumat Cost Producție</div>
+    <div class="ps">${xe(ofName)}</div>
+  </div>
+  <div class="pm">
+    ${ofProiect?`Nr. Proiect: <b>${xe(ofProiect)}</b><br>`:''}
+    Versiune: <b>${ver}</b><br>
+    ${ofDate?`Data: <b>${ofDate}</b><br>`:''}
+    Generat: <b>${genDate}</b>
+  </div>
+</div>
+<table>
+  <thead><tr>
+    <th>Nr.</th><th>Cod</th><th>Denumire</th><th>Utilaj</th>
+    <th>MOQ</th><th>L (mm)</th><th>l (mm)</th><th>g (mm)</th>
+    <th>Mat1</th><th>Mat2</th>
+    <th>Cost Prod €/p</th><th>Preț Met.Nouă €/p</th><th>×1000 €</th>
+    <th>Preț Met.Veche €/p</th><th>×1000 €</th>
+    <th>NPD €</th>
+    <th>An 1 €/p</th><th>An 2 €/p</th><th>An 3 €/p</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+${chartImg?`<div class="cw"><img src="${chartImg}" alt="Grafic comparație articole"></div>`:''}
+<div class="footer">PROGRAM CALCUL OFERTE — generat automat ${genDate}</div>
+</body></html>`;
+
+    const w=window.open('','_blank','width=1200,height=800');
+    if(!w){showToast('Browserul a blocat fereastra pop-up. Permiteți pop-up-urile pentru această pagină.','warn');return;}
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    // Așteptăm imaginea să fie încărcată, apoi printăm
+    setTimeout(()=>{w.print();},400);
+  },150);
+}
+
+// ═══ INTERACȚIUNI ═══
+function showTab(id,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('on'));
+  document.getElementById('tab-'+id).classList.add('on');
+  if(el)el.classList.add('on');
+  if(id==='dash')renderDash();
+  if(id==='ret')renderRet();
+  if(id==='cen')renderCen();
+  if(id==='utl')renderUtl();
+}
+function togCard(id){
+  const b=document.getElementById('ab-'+id),a=document.getElementById('arr-'+id);
+  const o=b.classList.toggle('on');if(a)a.textContent=o?'▲':'▼';
+}
+function upd(id,f,v){const a=articles.find(x=>x.id===id);if(!a)return;a[f]=v;if(f==='utilajPC'&&v){if(!a.utilR)a.utilR=['Empty','Empty','Empty','Empty','Empty'];a.utilR[0]=v;}renderPC();refCard(id);markDirty();}
+// updT: actualizare câmp text fără re-render (evită distrugerea input-ului activ)
+function updT(id,f,v){const a=articles.find(x=>x.id===id);if(!a)return;a[f]=v;markDirty();}
+function updUR(aid,s,v){const a=articles.find(x=>x.id===aid);if(!a)return;if(!a.utilR)a.utilR=['Empty','Empty','Empty','Empty','Empty'];a.utilR[s]=v;if(s===0)a.utilajPC=v;renderPC();refCard(aid);markDirty();}
+function updM(aid,i,f,v){const a=articles.find(x=>x.id===aid);if(!a||!a.mat[i])return;a.mat[i][f]=v;refCard(aid);markDirty();}
+function updU(i,f,v){
+  utilajeDB[i][f]=v;
+  const cs=utilajeDB[i].putere*utilajeDB[i].energie/3600,cp=cs*utilajeDB[i].timp;
+  const row=document.querySelector(`#bodyUtl tr:nth-child(${i+1})`);
+  if(row){const c=row.querySelectorAll('td');c[8].textContent=f6(cs);c[9].textContent=f6(cp);}
+  markDirty();
+}
+function refCard(id){
+  const card=document.getElementById('ac-'+id);if(!card)return;
+  const wasOn=document.getElementById('ab-'+id)?.classList.contains('on');
+  const a=articles.find(x=>x.id===id);
+  card.outerHTML=retCard(a);
+  if(wasOn){const b=document.getElementById('ab-'+id),ar=document.getElementById('arr-'+id);if(b){b.classList.add('on');if(ar)ar.textContent='▲';}}
+}
+function setTmpl(id){
+  templateId=(templateId===id)?null:id;
+  // dacă articolul a fost șters între timp, resetăm
+  if(templateId&&!articles.find(a=>a.id===templateId))templateId=null;
+  updateTmplInfo();
+  renderPC();
+}
+function updateTmplInfo(){
+  const el=document.getElementById('tmplInfo');if(!el)return;
+  if(articles.length<2){el.style.display='none';return;}
+  const src=templateId?articles.find(a=>a.id===templateId):articles[articles.length-1];
+  if(!src){el.style.display='none';return;}
+  const label=templateId?`⊙ Sursă: ${src.cod||'#'+src.id} — ${(src.denumire||'').slice(0,28)||'(fără denumire)'}`
+                        :`⊙ Sursă: ultimul — ${src.cod||'#'+src.id}`;
+  el.textContent=label;
+  el.style.display='inline-flex';
+}
+function addArt(){
+  if(articles.length>=15){showToast('Maximum 15 articole permise.','warn');return;}
+  if(articles.length===0){
+    articles.push(newArtObj());
+  }else{
+    // clonează din sursa selectată sau din ultimul articol
+    const src=articles.find(a=>a.id===templateId)||articles[articles.length-1];
+    const clone=JSON.parse(JSON.stringify(src));
+    clone.id=safeNextId();nextId=clone.id+1;
+    clone.cod='ART'+String(clone.id).padStart(2,'0');
+    articles.push(clone);
+    showToast(`＋ Articol nou clonat din ${src.cod||'#'+src.id}`,'ok');
+  }
+  renderPC();markDirty();
+  // scroll la ultimul rând
+  setTimeout(()=>{const tb=document.querySelector('#tPC tbody tr:last-child');if(tb)tb.scrollIntoView({block:'nearest',behavior:'smooth'});},80);
+}
+function safeNextId(){return articles.length?Math.max(...articles.map(a=>a.id))+1:1;}
+function delArt(id){
+  if(!confirm('Ștergeți articolul?'))return;
+  articles=articles.filter(a=>a.id!==id);
+  if(templateId===id)templateId=null;
+  // Renumerotam codurile secvential dupa stergere
+  articles.forEach((a,i)=>{a.cod='ART'+String(i+1).padStart(2,'0');});
+  nextId=safeNextId();
+  recalcAll();markDirty();
+}
+function recalcAll(){
+  renderPC();
+  const t=document.querySelector('.tab.on')?.id?.replace('tab-','');
+  if(t==='dash')renderDash();if(t==='ret')renderRet();if(t==='cen')renderCen();if(t==='utl')renderUtl();
+}
+function markDirty(){
+  isDirty=true;
+  const b=document.getElementById('vBadge');
+  if(b){if(offer.versiune){b.textContent='v'+offer.versiune+' *';b.className='vbadge dirty';}else{b.textContent='NOUĂ *';b.className='vbadge dirty';}}
+  document.getElementById('saveStatus').textContent='● modificat';
+  schedAutoSave();
+}
+function updateHdrDisplay(){
+  const nm=document.getElementById('ofName').value||'Ofertă nouă';
+  const dt=document.getElementById('ofDate').value;
+  document.getElementById('hdrName').textContent=nm;
+  document.getElementById('hdrDate').textContent=dt||'';
+  const vt=document.getElementById('hdrVer');
+  if(offer.versiune){vt.textContent='v'+offer.versiune;vt.style.background='var(--green)';}
+  else{vt.textContent='NOUĂ';vt.style.background='var(--amber)';}
+}
+function syncOfferFields(){
+  document.getElementById('ofName').value=offer.denumire||'';
+  document.getElementById('ofDate').value=offer.data||today();
+  document.getElementById('ofProiect').value=offer.proiect||'';
+  const b=document.getElementById('vBadge');
+  if(offer.versiune){b.textContent='v'+offer.versiune;b.className='vbadge saved';}
+  else{b.textContent='NOUĂ';b.className='vbadge';}
+  updateHdrDisplay();
+}
+function showOfferMsg(msg,type){
+  const el=document.getElementById('offerMsg');el.textContent=msg;el.className='offer-msg '+type;
+  setTimeout(()=>{el.textContent='';el.className='offer-msg';},4000);
+}
+let toastTimer;
+function showToast(msg,type=''){
+  const t=document.getElementById('toast');t.textContent=msg;t.className='show '+type;
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>{t.className='';},3500);
+}
+
+// ═══ IndexedDB — persistare handle folder ═══
+const IDB_NAME='calcul_oferta_idb', IDB_STORE='handles';
+function idbOpen(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open(IDB_NAME,1);
+    r.onupgradeneeded=e=>e.target.result.createObjectStore(IDB_STORE);
+    r.onsuccess=e=>res(e.target.result);
+    r.onerror=()=>rej(r.error);
+  });
+}
+async function idbSaveHandle(h){
+  try{const db=await idbOpen();const tx=db.transaction(IDB_STORE,'readwrite');
+    tx.objectStore(IDB_STORE).put(h,'saveDir');
+    await new Promise((r,j)=>{tx.oncomplete=r;tx.onerror=j;});db.close();}
+  catch(e){console.warn('IDB save err',e);}
+}
+async function idbLoadHandle(){
+  try{const db=await idbOpen();const tx=db.transaction(IDB_STORE,'readonly');
+    const req=tx.objectStore(IDB_STORE).get('saveDir');
+    return await new Promise((res,rej)=>{req.onsuccess=()=>{db.close();res(req.result);};req.onerror=()=>{db.close();rej(req.error);};});
+  }catch(e){return null;}
+}
+
+function updateFolderBarUI(name){
+  const el=document.getElementById('folderPath');
+  const bar=document.getElementById('folderBar');
+  const pathBar=document.getElementById('folderPathBar');
+  if(name){
+    el.textContent='📁 '+name;
+    bar.style.background='#e8f5e9';bar.style.borderColor='#4caf50';
+    if(pathBar){
+      pathBar.style.display='flex';
+      // Restaurăm calea salvată anterior
+      const stored=localStorage.getItem('SAVE_DIR_PATH')||'';
+      const inp=document.getElementById('saveDirPathInput');
+      if(inp&&stored){inp.value=stored;saveDirPath=stored;}
+    }
+  }else{
+    el.textContent='⚠ Folder neselectat — selectați folderul unde se află Calcul_Oferta.html';
+    bar.style.background='#fff3e0';bar.style.borderColor='#ff9800';
+    if(pathBar) pathBar.style.display='none';
+  }
+}
+
+async function restoreSavedFolder(){
+  if(!window.showDirectoryPicker)return;
+  try{
+    const h=await idbLoadHandle();
+    if(!h){
+      // IDB gol — fallback la localStorage
+      const savedName=localStorage.getItem('SAVE_DIR_NAME');
+      if(savedName){
+        console.log('[Folder] IDB gol, localStorage are:',savedName);
+        showReconfirmBanner(savedName, true);
+      }else{
+        console.log('[Folder] Niciun folder salvat anterior.');
+      }
+      return;
+    }
+    // Avem handle în IDB — populăm proactiv localStorage ca backup sigur
+    localStorage.setItem('SAVE_DIR_NAME', h.name);
+    console.log('[Folder] Handle găsit în IDB:',h.name);
+    let perm='prompt';
+    try{perm=await h.queryPermission({mode:'readwrite'});}
+    catch(pe){console.warn('[Folder] queryPermission eroare:',pe);}
+    console.log('[Folder] Permisiune:',perm);
+    if(perm==='granted'){
+      saveDir=h; updateFolderBarUI(h.name);
+      console.log('[Folder] Restaurat automat OK.');
+    }else{
+      // prompt sau denied — setăm saveDir și afișăm mesaj de reconfirmare
+      saveDir=h;
+      // Update direct în folderPath (abordare dovedită, mereu vizibilă în tab-ul PC)
+      const el=document.getElementById('folderPath');
+      const bar=document.getElementById('folderBar');
+      if(el) el.textContent='📁 '+h.name+' — apăsați 🔓 pentru reconfirmare';
+      if(bar){bar.style.background='#fff8e1';bar.style.borderColor='#ffc107';}
+      // Banner global pentru vizibilitate maximă
+      showReconfirmBanner(h.name, false);
+    }
+  }catch(e){
+    console.warn('[Folder] Restaurare eșuată:',e);
+    const savedName=localStorage.getItem('SAVE_DIR_NAME');
+    if(savedName) showReconfirmBanner(savedName, true);
+  }
+}
+
+function showReconfirmBanner(name, noHandle){
+  const banner=document.getElementById('folderBanner');
+  if(banner){
+    const span=document.getElementById('folderBannerName');
+    if(span) span.textContent='"'+name+'"';
+    const msg=document.getElementById('folderBannerMsg');
+    const btn=document.getElementById('folderBannerBtn');
+    if(noHandle){
+      // Nu avem handle în memorie — trebuie re-selectat folderul
+      if(msg) msg.innerHTML='📂 <b>Folderul de salvare</b> <span id="folderBannerName">"'+name+'"</span> trebuie re-selectat (sesiune nouă).';
+      if(btn){btn.textContent='📁 Re-selectează folderul';btn.onclick=()=>{pickSaveFolder();};}
+    }else{
+      // Avem handle, necesită doar reconfirmare permisiune
+      if(msg) msg.innerHTML='🔒 <b>Folderul de salvare</b> <span id="folderBannerName">"'+name+'"</span> necesită reconfirmarea accesului după repornirea browserului.';
+      if(btn){btn.textContent='🔓 Reconfirmă accesul';btn.onclick=()=>{reconfirmFolder();};}
+    }
+    banner.style.display='flex';
+    console.log('[Folder] Banner reconfirmare afișat pentru:',name,'noHandle:',!!noHandle);
+  }
+  const el=document.getElementById('folderPath');
+  const bar=document.getElementById('folderBar');
+  if(el) el.innerHTML='<span style="color:#5D4037">📁 <b>'+name+'</b> — acces expirat</span>';
+  if(bar){bar.style.background='#FFF8E1';bar.style.borderColor='#FFC107';}
+}
+
+async function reconfirmFolder(){
+  if(!saveDir)return;
+  try{
+    const perm=await saveDir.requestPermission({mode:'readwrite'});
+    if(perm==='granted'){
+      updateFolderBarUI(saveDir.name);
+      const banner=document.getElementById('folderBanner');
+      if(banner) banner.style.display='none';
+      const btn=document.getElementById('btnReconfirm');
+      if(btn) btn.style.display='none';
+      showToast('✅ Acces reconfirmat: '+saveDir.name,'ok');
+    }else{
+      showToast('⚠ Accesul la folder a fost refuzat.','warn');
+    }
+  }catch(e){
+    if(e.name!=='AbortError') showToast('Eroare reconfirmare: '+e.message,'err');
+  }
+}
+
+// ═══ BROWSER FOLDER — listare fișiere din saveDir ═══
+let folderFiles=[];
+let saveDirPath=localStorage.getItem('SAVE_DIR_PATH')||'';
+
+function openFolderInBrowser(){
+  // Încearcă calea din câmpul de text
+  const inp=document.getElementById('saveDirPathInput');
+  const path=(inp&&inp.value.trim())||saveDirPath;
+  if(!path){
+    // Dacă nu avem calea, afișăm bara de introducere cale
+    const pathBar=document.getElementById('folderPathBar');
+    if(pathBar){pathBar.style.display='flex';document.getElementById('saveDirPathInput').focus();}
+    if(!saveDir){
+      showToast('Selectați mai întâi folderul cu butonul 📁 Selectează Folder, apoi lipiți calea completă.','warn');
+    }else{
+      showToast('Lipiți calea completă a folderului în câmpul "Cale folder" apărut mai sus.','warn');
+    }
+    return;
+  }
+  // Convertim calea Windows (backslash) în URL file:///
+  const urlPath=path.replace(/\\/g,'/').replace(/\/+$/,'') + '/';
+  const url='file:///'+urlPath;
+  window.open(url,'_blank');
+}
+
+// Păstrăm funcția veche pentru compatibilitate internă
+async function openSaveFolder(){ openFolderInBrowser(); }
+
+function filterFolderFiles(){
+  const q=document.getElementById('folderSearch').value.toLowerCase();
+  const ext=document.getElementById('folderFilter').value;
+  const filtered=folderFiles.filter(f=>{
+    const nameOk=!q||f.name.toLowerCase().includes(q);
+    const extOk=!ext||f.name.toLowerCase().endsWith(ext);
+    return nameOk&&extOk;
+  });
+  renderFolderFiles(filtered);
+}
+
+function renderFolderFiles(list){
+  const el=document.getElementById('folderFileList');
+  if(!list.length){
+    el.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted);font-size:.82em">Niciun fișier găsit.</div>';
+    return;
+  }
+  const fmtSize=b=>b>1048576?(b/1048576).toFixed(1)+' MB':b>1024?(b/1024).toFixed(0)+' KB':b+' B';
+  const fmtDate=ms=>{const d=new Date(ms);return d.toLocaleDateString('ro-RO')+' '+d.toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit'});};
+  const icon=n=>n.endsWith('.xlsx')||n.endsWith('.xlsm')?'📊':n.endsWith('.json')?'📋':n.endsWith('.html')||n.endsWith('.htm')?'🌐':'📄';
+  el.innerHTML=list.map((f,i)=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;
+      border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s"
+      onmouseover="this.style.background='#f0f4ff'" onmouseout="this.style.background=''"
+      onclick="downloadFolderFile(${folderFiles.indexOf(f)})" title="Click pentru descărcare">
+      <span style="font-size:1.2em">${icon(f.name)}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:.82em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${xe(f.name)}</div>
+        <div style="font-size:.72em;color:var(--muted)">${fmtDate(f.modified)}</div>
+      </div>
+      <div style="font-size:.72em;color:var(--muted);white-space:nowrap">${fmtSize(f.size)}</div>
+      <button onclick="event.stopPropagation();downloadFolderFile(${folderFiles.indexOf(f)})"
+        style="background:var(--blue);color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:.7em;cursor:pointer">⬇</button>
+    </div>`).join('');
+}
+
+async function downloadFolderFile(idx){
+  const f=folderFiles[idx];if(!f)return;
+  try{
+    const blob=new Blob([await f.file.arrayBuffer()],{type:f.file.type||'application/octet-stream'});
+    downloadBlob(blob,f.name);
+    showToast('⬇ Descărcat: '+f.name,'ok');
+  }catch(e){showToast('Eroare: '+e.message,'err');}
+}
+
+// ═══ FOLDER PICKER (File System Access API) ═══
+async function pickSaveFolder(){
+  if(!window.showDirectoryPicker){
+    showToast('Browserul nu suportă File System Access API. Folosiți Chrome/Edge.','warn');
+    return false;
+  }
+  try{
+    saveDir=await window.showDirectoryPicker({mode:'readwrite'});
+    updateFolderBarUI(saveDir.name);
+    await idbSaveHandle(saveDir);
+    // Salvăm și numele în localStorage ca fallback sigur
+    localStorage.setItem('SAVE_DIR_NAME', saveDir.name);
+    // Ascundem bannerul dacă era afișat
+    const banner=document.getElementById('folderBanner');
+    if(banner) banner.style.display='none';
+    showToast('📁 Folder setat: '+saveDir.name,'ok');
+    return true;
+  }catch(e){
+    if(e.name!=='AbortError') showToast('Eroare la selectarea folderului: '+e.message,'err');
+    return false;
+  }
+}
+
+async function writeToFolder(filename,blob){
+  if(!saveDir)return false;
+  try{
+    const fh=await saveDir.getFileHandle(filename,{create:true});
+    const writable=await fh.createWritable();
+    await writable.write(blob);
+    await writable.close();
+    return true;
+  }catch(e){
+    console.error('writeToFolder error:',e);
+    showToast('Eroare scriere fișier: '+e.message,'err');
+    return false;
+  }
+}
+
+function downloadBlob(blob,filename){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+}
+
+function showSaveConfirm(filename, location){
+  // Afișează un modal de confirmare proeminent cu locația fișierului
+  const existing=document.getElementById('saveConfirmBanner');
+  if(existing) existing.remove();
+  const banner=document.createElement('div');
+  banner.id='saveConfirmBanner';
+  banner.style.cssText=`position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+    background:#1b5e20;color:#fff;padding:14px 24px;border-radius:10px;
+    box-shadow:0 4px 20px rgba(0,0,0,.4);z-index:9999;font-size:13px;
+    display:flex;align-items:center;gap:14px;max-width:90vw;animation:slideUp .3s ease`;
+  banner.innerHTML=`<span style="font-size:22px">✅</span>
+    <div>
+      <div style="font-weight:700;font-size:14px">Fișier salvat cu succes!</div>
+      <div style="opacity:.9;margin-top:2px">📄 <b>${filename}</b></div>
+      <div style="opacity:.75;font-size:11px;margin-top:2px">📁 Locație: <b>${location}</b></div>
+    </div>
+    <button onclick="this.parentElement.remove()" style="background:rgba(255,255,255,.2);border:none;color:#fff;
+      padding:4px 10px;border-radius:5px;cursor:pointer;font-size:12px;margin-left:8px">✕</button>`;
+  document.body.appendChild(banner);
+  setTimeout(()=>{if(banner.parentElement)banner.remove();},12000);
+}
+
+function showDownloadConfirm(filename){
+  const existing=document.getElementById('saveConfirmBanner');
+  if(existing) existing.remove();
+  const banner=document.createElement('div');
+  banner.id='saveConfirmBanner';
+  banner.style.cssText=`position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+    background:#e65100;color:#fff;padding:14px 24px;border-radius:10px;
+    box-shadow:0 4px 20px rgba(0,0,0,.4);z-index:9999;font-size:13px;
+    display:flex;align-items:center;gap:14px;max-width:90vw;animation:slideUp .3s ease`;
+  banner.innerHTML=`<span style="font-size:22px">📥</span>
+    <div>
+      <div style="font-weight:700;font-size:14px">Fișier descărcat în Downloads!</div>
+      <div style="opacity:.9;margin-top:2px">📄 <b>${filename}</b></div>
+      <div style="opacity:.75;font-size:11px;margin-top:2px">⚠ Fișierul este în folderul <b>Downloads</b> al browserului.
+        <br>Selectați un folder cu butonul 📁 pentru a salva direct lângă HTML.</div>
+    </div>
+    <button onclick="this.parentElement.remove()" style="background:rgba(255,255,255,.2);border:none;color:#fff;
+      padding:4px 10px;border-radius:5px;cursor:pointer;font-size:12px;margin-left:8px">✕</button>`;
+  document.body.appendChild(banner);
+  setTimeout(()=>{if(banner.parentElement)banner.remove();},15000);
+}
+
+// ═══ DATABASE ═══
+function getDB(){try{return JSON.parse(localStorage.getItem(DB_KEY))||{versions:[]};}catch(e){return{versions:[]};}}
+function saveDB(db){try{localStorage.setItem(DB_KEY,JSON.stringify(db));}catch(e){} sbSaveShared(DB_KEY,db);}
+
+function saveOffer(){
+  const nm=(document.getElementById('ofName').value||'').trim();
+  if(!nm){document.getElementById('ofName').focus();showOfferMsg('⚠ Completați denumirea ofertei!','err');showToast('⚠ Completați denumirea ofertei!','err');return;}
+  const dt=document.getElementById('ofDate').value||today();
+  const prj=(document.getElementById('ofProiect').value||'').trim()||String(articles[0]?.prj||'');
+  const db=getDB();
+  const same=db.versions.filter(v=>v.denumire===nm&&String(v.proiect)===String(prj));
+  const newVer=same.length?Math.max(...same.map(v=>v.versiune))+1:1;
+  const entry={id:Date.now().toString(),denumire:nm,data:dt,proiect:prj,versiune:newVer,
+    savedAt:new Date().toISOString(),
+    articles:JSON.parse(JSON.stringify(articles)),
+    utilajeDB:JSON.parse(JSON.stringify(utilajeDB)),
+    fmDB:JSON.parse(JSON.stringify(fmDB)),
+    nextId};
+  db.versions.push(entry);saveDB(db);
+  offer={id:entry.id,denumire:nm,data:dt,proiect:prj,versiune:newVer,savedAt:entry.savedAt};
+  isDirty=false;saveCurrentState();syncOfferFields();
+  const msg=`✓ Salvat: "${nm}" — Versiunea ${newVer}`;
+  showOfferMsg(msg,'ok');showToast(msg,'ok');
+  document.getElementById('saveStatus').textContent=`✓ v${newVer} — ${nm}`;
+}
+function newOffer(){
+  if(isDirty&&!confirm('Aveți modificări nesalvate. Continuați?'))return;
+  articles=[];nextId=1;
+  offer={id:null,denumire:'',data:today(),proiect:'',versiune:null,savedAt:null};
+  isDirty=false;syncOfferFields();renderPC();
+  document.getElementById('saveStatus').textContent='● ofertă nouă';
+  showTab('pc',document.querySelector('.ntab:nth-child(2)'));
+}
+function openLoadModal(){
+  document.getElementById('fPrj').value='';document.getElementById('fVer').value='';document.getElementById('fData').value='';
+  filterVers();document.getElementById('loadModal').classList.add('on');
+}
+function closeLoadModal(){document.getElementById('loadModal').classList.remove('on');}
+function filterVers(){
+  const db=getDB();let vers=db.versions.slice().reverse();
+  const fp=(document.getElementById('fPrj').value||'').trim().toLowerCase();
+  const fv=(document.getElementById('fVer').value||'').trim();
+  const fd=(document.getElementById('fData').value||'').trim();
+  if(fp)vers=vers.filter(v=>String(v.proiect||'').toLowerCase().includes(fp)||String(v.denumire||'').toLowerCase().includes(fp));
+  if(fv)vers=vers.filter(v=>v.versiune===+fv);
+  if(fd)vers=vers.filter(v=>(v.data||'')===fd);
+  const c=document.getElementById('versList');
+  if(!vers.length){c.innerHTML='<p class="no-data">Nu există versiuni care să corespundă filtrelor.</p>';return;}
+  c.innerHTML=`<table class="vtab"><thead><tr>
+    <th>Nr</th><th>Denumire Ofertă</th><th>Nr.Proiect</th><th>Versiune</th><th>Data Întocmirii</th><th>Salvat la</th><th>Articole</th><th>Acțiuni</th>
+  </tr></thead><tbody>${vers.map((v,i)=>{
+    const sd=new Date(v.savedAt);
+    const sdStr=sd.toLocaleDateString('ro-RO')+' '+sd.toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit'});
+    return`<tr>
+<td style="color:var(--muted)">${i+1}</td>
+<td style="font-weight:600">${xe(v.denumire)}</td>
+<td style="font-family:monospace">${xe(v.proiect||'—')}</td>
+<td><span class="ver-num">v${v.versiune}</span></td>
+<td>${v.data||'—'}</td>
+<td style="font-size:.78em;color:var(--muted)">${sdStr}</td>
+<td style="text-align:center">${(v.articles||[]).length}</td>
+<td style="white-space:nowrap">
+  <button class="btn btn-blue btn-xs" onclick="loadVersion('${v.id}')">⬆ Încarcă</button>
+  <button class="btn btn-red btn-xs" onclick="deleteVersion('${v.id}')" style="margin-left:3px">✕</button>
+</td></tr>`;
+  }).join('')}</tbody></table>`;
+}
+function clearFilters(){document.getElementById('fPrj').value='';document.getElementById('fVer').value='';document.getElementById('fData').value='';filterVers();}
+function _loadVersionOld(id){
+  const db=getDB();const v=db.versions.find(x=>x.id===id);if(!v)return;
+  if(isDirty&&!confirm('Aveți modificări nesalvate. Încărcați oricum?'))return;
+  articles=JSON.parse(JSON.stringify(v.articles||[]));
+  utilajeDB=v.utilajeDB?JSON.parse(JSON.stringify(v.utilajeDB)):utilajeDB;
+  // Restaurare completă fmDB (valorile exacte din momentul salvării)
+  if(v.fmDB && Array.isArray(v.fmDB) && v.fmDB.length){
+    fmDB=JSON.parse(JSON.stringify(v.fmDB));
+  } else {
+    mergeFmDB(v.fmDB); // fallback pentru versiuni vechi fără fmDB
+  }
+  nextId=safeNextId();
+  offer={id:v.id,denumire:v.denumire,data:v.data,proiect:v.proiect,versiune:v.versiune,savedAt:v.savedAt};
+  isDirty=false;saveCurrentState();syncOfferFields();renderPC();renderFM();closeLoadModal();
+  showToast(`✓ Încărcat: "${v.denumire}" v${v.versiune}`,'ok');
+  document.getElementById('saveStatus').textContent=`✓ Încărcat: "${v.denumire}" v${v.versiune}`;
+  showTab('pc',document.querySelector('.ntab:nth-child(2)'));
+}
+function deleteVersion(id){
+  if(!confirm('Ștergeți definitiv această versiune?'))return;
+  const db=getDB();db.versions=db.versions.filter(v=>v.id!==id);saveDB(db);filterVers();showToast('Versiune ștearsă.','warn');
+}
+function schedAutoSave(){clearTimeout(saveTimer);saveTimer=setTimeout(autoSave,2500);}
+function autoSave(){
+  saveCurrentState();if(!isDirty)return;
+  const t=new Date(),ts=t.getHours().toString().padStart(2,'0')+':'+t.getMinutes().toString().padStart(2,'0');
+  document.getElementById('saveStatus').textContent='⚠ modificat (nesalvat în BD) '+ts;
+}
+function saveCurrentState(){try{localStorage.setItem(CUR_KEY,JSON.stringify({articles,utilajeDB,fmDB,nextId,offer}));}catch(e){}}
+function mergeFmDB(saved){
+  // Restaurează valorile salvate de utilizator, dar păstrează intrările noi din default
+  if(!saved||!Array.isArray(saved))return;
+  fmDB.forEach(d=>{
+    const sv=saved.find(x=>x.key===d.key);
+    if(sv&&sv.val!==undefined)d.val=sv.val; // restaurează valoarea editată
+  });
+  // Adaugă intrări salvate de utilizator care nu există în default (ex. custom adăugate manual)
+  saved.forEach(sv=>{
+    if(!fmDB.find(d=>d.key===sv.key))fmDB.push(Object.assign({},sv));
+  });
+}
+function loadCurrentState(){
+  try{
+    const s=JSON.parse(localStorage.getItem(CUR_KEY));if(!s)return false;
+    if(s.articles)articles=s.articles;
+    if(s.utilajeDB)utilajeDB=s.utilajeDB;
+    mergeFmDB(s.fmDB); // merge inteligent — nu suprascrie defaulturile noi
+    if(s.nextId)nextId=s.nextId;
+    nextId=safeNextId(); // always recalculate to prevent ID collisions
+    if(s.offer)offer=s.offer;
+    return true;
+  }catch(e){return false;}
+}
+
+// ═══ EXPORT JSON ═══
+async function exportDatabaseJSON(){
+  const db=getDB();
+  if(!db.versions.length){showToast('Baza de date este goală. Salvați mai întâi o ofertă.','warn');return;}
+  // Auto-prompt folder dacă nu e setat (sau dacă trebuie reconfirmat)
+  if(window.showDirectoryPicker){
+    if(!saveDir){
+      const ok=confirm('📁 Nu ați selectat un folder de salvare.\n\nApăsați OK pentru a selecta folderul unde se află Calcul_Oferta.html,\nsau Anulare pentru a descărca fișierul prin browser (în Downloads).');
+      if(ok) await pickSaveFolder();
+    } else {
+      // Verifică dacă permisiunea e încă activă
+      try{
+        const perm=await saveDir.queryPermission({mode:'readwrite'});
+        if(perm!=='granted'){
+          const perm2=await saveDir.requestPermission({mode:'readwrite'});
+          if(perm2!=='granted'){saveDir=null;updateFolderBarUI(null);}
+        }
+      }catch(e){saveDir=null;updateFolderBarUI(null);}
+    }
+  }
+  const d=new Date(),ds=d.getFullYear()+''+String(d.getMonth()+1).padStart(2,'0')+''+String(d.getDate()).padStart(2,'0');
+  const filename=`BazaDeDateCotatii_${ds}.json`;
+  const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
+  if(saveDir){
+    const ok=await writeToFolder(filename,blob);
+    if(ok){showSaveConfirm(filename,saveDir.name);return;}
+  }
+  downloadBlob(blob,filename);
+  showDownloadConfirm(filename);
+}
+function importDBFile(inp){
+  const f=inp.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!data.versions)throw new Error('Format invalid');
+      const db=getDB();let added=0;
+      for(const v of data.versions){if(!db.versions.find(x=>x.id===v.id)){db.versions.push(v);added++;}}
+      saveDB(db);filterVers();showToast(`✓ Import: ${added} versiuni noi adăugate`,'ok');
+    }catch(err){showToast('✕ Eroare import: '+err.message,'err');}
+    inp.value='';
+  };r.readAsText(f);
+}
+let confirmResolve=()=>{};
+function showConfirm(title,msg){
+  return new Promise(res=>{
+    document.getElementById('confirmTitle').textContent=title;
+    document.getElementById('confirmMsg').textContent=msg;
+    document.getElementById('confirmModal').classList.add('on');
+    confirmResolve=v=>{document.getElementById('confirmModal').classList.remove('on');res(v);};
+  });
+}
+
+// ═══ EXPORT EXCEL (ExcelJS) — IDENTIC CU ORIGINALUL ═══
+async function exportOfferXLSX(){
+  // Dacă ExcelJS nu e disponibil, încearcă să îl încarce dinamic
+  if(!window.ExcelJS){
+    showToast('⏳ Se încarcă ExcelJS...','');
+    await new Promise((resolve,reject)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
+      s.onload=resolve; s.onerror=reject;
+      document.head.appendChild(s);
+    }).catch(()=>{});
+    await new Promise(r=>setTimeout(r,1000));
+  }
+  if(!window.ExcelJS){
+    showToast('❌ ExcelJS indisponibil — verificați conexiunea la internet.','err');
+    alert('Eroare: Librăria ExcelJS nu s-a putut încărca.\nVerificați conexiunea la internet și reîncercați.\n\n(Browserul trebuie să aibă acces la cdn.jsdelivr.net)');
+    return;
+  }
+  // Folder: verifică permisiune sau solicită selectare
+  if(window.showDirectoryPicker){
+    if(!saveDir){
+      const ok=confirm('📁 Nu ați selectat un folder de salvare.\n\nApăsați OK pentru a selecta folderul unde se află Calcul_Oferta.html,\nsau Anulare pentru a descărca prin browser (în Downloads).');
+      if(ok) await pickSaveFolder();
+    } else {
+      try{
+        const perm=await saveDir.queryPermission({mode:'readwrite'});
+        if(perm!=='granted'){
+          const perm2=await saveDir.requestPermission({mode:'readwrite'});
+          if(perm2!=='granted'){saveDir=null;updateFolderBarUI(null);}
+        }
+      }catch(e){saveDir=null;updateFolderBarUI(null);}
+    }
+  }
+  showToast('⏳ Generez fișierul Excel...','');
+  await new Promise(r=>setTimeout(r,80));
+  console.log('[Export] Start ExcelJS export...');
+
+  const nm=document.getElementById('ofName').value||offer.denumire||'Oferta';
+  const dt=document.getElementById('ofDate').value||offer.data||today();
+  const prj=document.getElementById('ofProiect').value||offer.proiect||'';
+
+  try{ // ← CATCH GLOBAL — prinde ORICE eroare din generare
+
+  const wb=new ExcelJS.Workbook();
+  wb.creator='Calcul Oferta'; wb.created=new Date();
+  console.log('[Export] Workbook creat, articole:', articles.length);
+
+  // ─── CULORI (din originalul .xlsm) ───
+  const C={
+    navy:'1F3864',      // header info cols
+    dkGreen:'375623',   // header input cols
+    dkGold:'7F6000',    // header dropdown cols
+    dkGray:'404040',    // header calculated cols
+    dkOrange:'833C00',  // header final price cols
+    dkBlue:'2F5496',    // centralizator utilaj col
+    teal:'1F6B75',      // centralizator cost cols
+    ltGreen:'E2EFDA',   // input cells
+    ltYellow:'FFF2CC',  // dropdown cells
+    ltGray:'F2F2F2',    // calculated cells
+    ltOrange:'FCE4D6',  // final price cells
+    white:'FFFFFFFF',
+    black:'FF000000',
+  };
+
+  // ─── HELPERS ───
+  function argb(hex){return hex.length===6?'FF'+hex:hex;}
+  function solid(hex){return{type:'pattern',pattern:'solid',fgColor:{argb:argb(hex)}};}
+  function hdr(cell,fillHex,bold=true){
+    cell.fill=solid(fillHex);
+    cell.font={bold,color:{argb:'FFFFFFFF'},size:9,name:'Calibri'};
+    cell.alignment={vertical:'middle',horizontal:'center',wrapText:true};
+    cell.border={top:{style:'thin'},left:{style:'thin'},bottom:{style:'thin'},right:{style:'thin'}};
+  }
+  function data(cell,fillHex,fmt,bold=false,align='center'){
+    if(fillHex)cell.fill=solid(fillHex);
+    cell.font={size:9,name:'Calibri',bold};
+    cell.alignment={vertical:'middle',horizontal:align,wrapText:false};
+    if(fmt)cell.numFmt=fmt;
+    cell.border={top:{style:'thin',color:{argb:'FFD0D0D0'}},left:{style:'thin',color:{argb:'FFD0D0D0'}},
+      bottom:{style:'thin',color:{argb:'FFD0D0D0'}},right:{style:'thin',color:{argb:'FFD0D0D0'}}};
+  }
+  function setRow(ws,r,h){ws.getRow(r).height=h;}
+  function title(ws,txt,row,lastCol){
+    const cell=ws.getCell(row,1);cell.value=txt;
+    cell.font={bold:true,size:14,color:{argb:'FF1F3864'},name:'Calibri'};
+    cell.alignment={vertical:'middle',horizontal:'left'};
+    ws.mergeCells(row,1,row,lastCol);setRow(ws,row,22);
+  }
+  function legend(ws,txt,row,lastCol){
+    const cell=ws.getCell(row,1);cell.value=txt;
+    cell.font={italic:true,size:9,color:{argb:'FF5A5A5A'},name:'Calibri'};
+    ws.mergeCells(row,1,row,lastCol);setRow(ws,row,14);
+  }
+
+  // ═══════════════════════════════════════════════════
+  // SHEET 1: ProgramCalcul
+  // ═══════════════════════════════════════════════════
+  const wsPC=wb.addWorksheet('ProgramCalcul');
+  wsPC.views=[{state:'frozen',xSplit:0,ySplit:9}];
+
+  title(wsPC,'  PROGRAM CALCUL OFERTE  –  Calcul Cost Material',5,41);
+  legend(wsPC,'  ■ Verde = câmpuri editabile (input)     ■ Galben = dropdown     ■ Gri = valori calculate     ■ Portocaliu = prețuri finale',6,41);
+  setRow(wsPC,7,6);
+
+  // Setare lățimi coloane
+  const pcWidths=[5.5,5.3,7,10.7,9.6,5.5,40,11.7,8.4,9,9,12,9,9,8,9,8,7,7,9,9,7,9,7,7,9,8,8,8,6,8,7,8,9,8,11,6,9,8,8,6];
+  pcWidths.forEach((w,i)=>{wsPC.getColumn(i+1).width=w;});
+
+  // Header Row 8 — definiții
+  setRow(wsPC,8,51.75);
+  const pcHdrs=[
+    {c:1,l:'Nr.\nCrt',f:C.navy},{c:2,l:'PRJ',f:C.navy},{c:3,l:'Client',f:C.navy},
+    {c:4,l:'OEM',f:C.navy},{c:5,l:'Proiect',f:C.navy},{c:6,l:'SOP',f:C.navy},
+    {c:7,l:'Denumire',f:C.navy},
+    {c:8,l:'Set\n(DROPDOWN)',f:C.dkGold},{c:9,l:'Nr. Piese/\nSet (buc)',f:C.dkGreen},
+    {c:10,l:'EYV (buc)',f:C.dkGreen},{c:11,l:'MOQ (buc)',f:C.dkGreen},
+    {c:12,l:'Utilaj Folosit\n(DROPDOWN)',f:C.dkGold},
+    {c:13,l:'Lungime Piesă\n(mm)',f:C.dkGreen},{c:14,l:'Lățime Piesă\n(mm)',f:C.dkGreen},
+    {c:15,l:'Grosime\n(mm)',f:C.dkGreen},{c:16,l:'Avans (mm)',f:C.dkGreen},
+    {c:17,l:'Nr. Piese/\nAvans (buc)',f:C.dkGreen},{c:18,l:'Gap între\nPiese (mm)',f:C.dkGreen},
+    {c:19,l:'Gap Margine\n(mm)',f:C.dkGreen},
+    {c:20,l:'Suprafață EYV\n(m²)',f:C.dkGray},{c:21,l:'Volum EYV\n(m³)',f:C.dkGray},
+    {c:22,l:'Factor\nRotunjire',f:C.dkGold},
+    {c:23,l:'Lățime Utilă\nRolă (mm)',f:C.dkGray},
+    {c:24,l:'Material\nMat1',f:C.dkGold},{c:25,l:'Material\nMat2',f:C.dkGold},
+    {c:26,l:'Lățime Log\n(mm)',f:C.dkGreen},{c:27,l:'Lungime Log\n(m)',f:C.dkGreen},
+    {c:28,l:'PrM1\n(€/m²)',f:C.dkGreen},{c:29,l:'PrM2\n(€/m²)',f:C.dkGreen},
+    {c:30,l:'PrM3\n(€/m²)',f:C.dkGreen},{c:31,l:'PrM4\n(€/m²)',f:C.dkGreen},{c:32,l:'PrMt\n(€/m²)',f:C.dkGray},
+    {c:33,l:'Preț/Log\n(€)',f:C.dkGray},{c:34,l:'Nr. Role/\nLog (buc)',f:C.dkGray},
+    {c:35,l:'Pierdere\nLățime Log (mm)',f:C.dkGray},{c:36,l:'Nr. Piese/\nRolă (buc)',f:C.dkGray},
+    {c:37,l:'Nr. Piese/\nLog (buc)',f:C.dkGray},{c:38,l:'Cost/Piesă\n(€)',f:C.dkGray},
+    {c:39,l:'Cost/Set\n(€)',f:C.dkGray},
+    {c:40,l:'Selecție FM\n(DROPDOWN)',f:C.dkGold},{c:41,l:'FM',f:C.dkGray},
+    {c:42,l:'Preț/Piesă\n(€)',f:C.dkOrange},{c:43,l:'Preț/Set\n(€)',f:C.dkOrange},
+    {c:44,l:'NPD\n(€)',f:C.dkGreen},{c:45,l:'Productivitate\nAnuală (%)',f:C.dkGreen},
+  ];
+  pcHdrs.forEach(h=>{hdr(wsPC.getCell(8,h.c),h.f);wsPC.getCell(8,h.c).value=h.l;});
+
+  // Row 9 — numere coloane
+  setRow(wsPC,9,13);
+  for(let c=1;c<=45;c++){
+    const cell=wsPC.getCell(9,c);cell.value='('+c+')';
+    cell.font={size:8,name:'Calibri',color:{argb:'FFaaaaaa'}};
+    cell.alignment={horizontal:'center',vertical:'middle'};
+    cell.fill=solid(C.ltGray);
+  }
+
+  // Rânduri date
+  articles.forEach((a,idx)=>{
+    const pc=cPC(a);
+    const rn=10+idx;setRow(wsPC,rn,19.5);
+    const rowData=[
+      {v:idx+1,f:null,fmt:'0',align:'center'},
+      {v:a.prj||null,f:C.ltGreen,fmt:'0',align:'center'},
+      {v:a.client||null,f:C.ltGreen,fmt:null,align:'left'},
+      {v:a.oem||null,f:C.ltGreen,fmt:null,align:'left'},
+      {v:a.proiect||null,f:C.ltGreen,fmt:'0',align:'center'},
+      {v:a.sop||null,f:C.ltGreen,fmt:null,align:'center'},
+      {v:a.denumire||null,f:C.ltGreen,fmt:null,align:'left'},
+      {v:a.set,f:C.ltYellow,fmt:null,align:'center'},
+      {v:a.nrps,f:C.ltGreen,fmt:'0',align:'center'},
+      {v:a.eyv,f:C.ltGreen,fmt:'#,##0',align:'center'},
+      {v:a.moq,f:C.ltGreen,fmt:'#,##0',align:'center'},
+      {v:a.utilajPC,f:C.ltYellow,fmt:null,align:'left'},
+      {v:a.lung,f:C.ltGreen,fmt:'0.##',align:'center'},
+      {v:a.lat,f:C.ltGreen,fmt:'0.##',align:'center'},
+      {v:a.gros,f:C.ltGreen,fmt:'0.###',align:'center'},
+      {v:a.avans,f:C.ltGreen,fmt:'0.##',align:'center'},
+      {v:a.nrpa,f:C.ltGreen,fmt:'0',align:'center'},
+      {v:a.gapI,f:C.ltGreen,fmt:'0.##',align:'center'},
+      {v:a.gapM,f:C.ltGreen,fmt:'0.##',align:'center'},
+      {v:+pc.sEYV.toFixed(6),f:C.ltGray,fmt:'0.000000',align:'center'},
+      {v:+pc.vEYV.toFixed(6),f:C.ltGray,fmt:'0.000000',align:'center'},
+      {v:a.frot,f:C.ltYellow,fmt:'0',align:'center'},
+      {v:pc.lU,f:C.ltGray,fmt:'0',align:'center'},
+      {v:a.mde2||null,f:C.ltYellow,fmt:null,align:'left'},
+      {v:a.matf||null,f:C.ltYellow,fmt:null,align:'left'},
+      {v:a.latL,f:C.ltGreen,fmt:'0',align:'center'},
+      {v:a.lunL,f:C.ltGreen,fmt:'0.##',align:'center'},
+      {v:a.pm1||0,f:C.ltGreen,fmt:'0.00',align:'center'},
+      {v:a.pm2||0,f:C.ltGreen,fmt:'0.00',align:'center'},
+      {v:a.pm3||0,f:C.ltGreen,fmt:'0.00',align:'center'},
+      {v:a.pm4||0,f:C.ltGreen,fmt:'0.00',align:'center'},
+      {v:(+a.pm1||0)+(+a.pm2||0)+(+a.pm3||0)+(+a.pm4||0)||(+a.pretm2||0),f:C.ltGray,fmt:'0.00',align:'center'},
+      {v:+pc.pLog.toFixed(4),f:C.ltGray,fmt:'0.0000',align:'center'},
+      {v:pc.nRo,f:C.ltGray,fmt:'0',align:'center'},
+      {v:pc.pLat,f:C.ltGray,fmt:'0',align:'center'},
+      {v:pc.pcRo,f:C.ltGray,fmt:'#,##0',align:'center'},
+      {v:pc.pcLog,f:C.ltGray,fmt:'#,##0',align:'center'},
+      {v:+pc.costP.toFixed(6),f:C.ltGray,fmt:'0.000000',align:'center'},
+      {v:pc.costS!=null?+pc.costS.toFixed(6):'-',f:C.ltGray,fmt:pc.costS!=null?'0.000000':null,align:'center'},
+      {v:a.selFM,f:C.ltYellow,fmt:null,align:'center'},
+      {v:pc.fmd!=='N/A'&&pc.fmd!=='?'?+pc.fmd:pc.fmd,f:C.ltGray,fmt:typeof pc.fmd==='number'?'0.00':null,align:'center'},
+      {v:+pc.pretP.toFixed(6),f:C.ltOrange,fmt:'0.000000',align:'center',bold:true},
+      {v:pc.pretS!=null?+pc.pretS.toFixed(6):'-',f:C.ltOrange,fmt:pc.pretS!=null?'0.000000':null,align:'center',bold:true},
+      {v:a.npd||null,f:C.ltGreen,fmt:'0.00',align:'center'},
+      {v:a.prod,f:C.ltGreen,fmt:'0.0"%"',align:'center'},
+    ];
+    rowData.forEach((d,ci)=>{
+      const cell=wsPC.getCell(rn,ci+1);
+      cell.value=d.v;
+      data(cell,d.f,d.fmt,d.bold||false,d.align||'center');
+    });
+  });
+
+  console.log('[Export] Sheet ProgramCalcul OK');
+  // ═══════════════════════════════════════════════════
+  // SHEET 2: RETETA
+  // ═══════════════════════════════════════════════════
+  const wsRet=wb.addWorksheet('RETETA');
+  title(wsRet,'  REȚETĂ PIESĂ  –  Calcul Cost de Producție',1,21);
+  [3,5,6,7,8,9,10,11].forEach(r=>setRow(wsRet,r,6));
+
+  const retCols=[6,22,8,6,8,10,8,14,14,10,8,8,8,7,8,8,8,8,7,7,6];
+  retCols.forEach((w,i)=>{wsRet.getColumn(i+1).width=w;});
+
+  let retRow=47;
+  articles.forEach((a,idx)=>{
+    const r=cRet(a),pc=cPC(a);
+    // Articol header
+    setRow(wsRet,retRow,16);
+    const ahCell=wsRet.getCell(retRow,1);
+    ahCell.value=`▶  ARTICOL ${idx+1}`;
+    ahCell.font={bold:true,size:11,color:{argb:'FF1F3864'},name:'Calibri'};
+    ahCell.fill=solid('D6E4BC');
+    wsRet.getCell(retRow,2).value='Cod:';wsRet.getCell(retRow,3).value=a.cod||'';
+    wsRet.getCell(retRow,4).value='Denumire:';wsRet.getCell(retRow,5).value=a.denumire||'';
+    wsRet.mergeCells(retRow,5,retRow,21);
+    for(let ci=0;ci<5;ci++) wsRet.getCell(retRow,ci+1).fill=solid('D6E4BC');
+    retRow++;
+
+    // Params headers
+    setRow(wsRet,retRow,32);
+    const ph1=['CPM\n[%]','CAM\n[%]','CI\n[%]','Profit\n[%]','Op.1\n[€/h]','Op.2\n[€/h]','Op.3\n[€/h]','MOQ\n[buc]','SCRAP\n[%]','Transport\n[€/MOQ]'];
+    ph1.forEach((l,ci)=>{hdr(wsRet.getCell(retRow,ci+1),'375623');wsRet.getCell(retRow,ci+1).value=l;});
+    retRow++;
+
+    // Params values
+    setRow(wsRet,retRow,16);
+    const pv1=[a.cpm,a.cam,a.ci,a.profit,a.op1r,a.op2r,a.op3r,a.moq,a.scrap,a.transp];
+    const pf1=['0.0%','0.0%','0.0%','0.0%','0.00','0.00','0.00','#,##0','0.0%','0.00'];
+    pv1.forEach((v,ci)=>{data(wsRet.getCell(retRow,ci+1),C.ltGreen,pf1[ci]);wsRet.getCell(retRow,ci+1).value=v;});
+    retRow++;
+
+    // Production headers
+    setRow(wsRet,retRow,32);
+    const ph2=['Energie\n[€/kWh]','Grad\nDif(1/2/3)','TimpSet\n[min]','Utilaj 1','Utilaj 2','Utilaj 3','Utilaj 4','Utilaj 5'];
+    ph2.forEach((l,ci)=>{hdr(wsRet.getCell(retRow,ci+1),'7F6000');wsRet.getCell(retRow,ci+1).value=l;});
+    retRow++;
+
+    // Production values
+    setRow(wsRet,retRow,16);
+    const pv2=[a.energie,a.gdif,a.tset,...(a.utilR||['Empty','Empty','Empty','Empty','Empty']).slice(0,5)];
+    pv2.forEach((v,ci)=>{data(wsRet.getCell(retRow,ci+1),C.ltYellow,null);wsRet.getCell(retRow,ci+1).value=v;});
+    retRow++;
+
+    // Materials header
+    setRow(wsRet,retRow,28);
+    const mh=['Nr.','Denumire Material','Cantitate','UM','Preț [€/UM]','Valoare [€/p]'];
+    mh.forEach((l,ci)=>{hdr(wsRet.getCell(retRow,ci+1),'34495E');wsRet.getCell(retRow,ci+1).value=l;});
+    retRow++;
+
+    // Material 1 (main)
+    setRow(wsRet,retRow,16);
+    wsRet.getCell(retRow,1).value=1;
+    wsRet.getCell(retRow,2).value=a.matf||a.mde2||'Material principal';
+    wsRet.getCell(retRow,3).value='—';wsRet.getCell(retRow,4).value='buc';
+    wsRet.getCell(retRow,5).value=+pc.costP.toFixed(6);
+    wsRet.getCell(retRow,6).value=+r.mpi.toFixed(6);
+    [1,2,3,4,5,6].forEach(ci=>{data(wsRet.getCell(retRow,ci),C.ltGray,'0.000000');});
+    retRow++;
+
+    // Materials 2-5
+    for(let mi=1;mi<=4;mi++){
+      const m=a.mat[mi]||{};setRow(wsRet,retRow,16);
+      const val=(!m.c||m.c===0)?(m.p||0):((m.c||0)*(m.p||0));
+      wsRet.getCell(retRow,1).value=mi+1;
+      wsRet.getCell(retRow,2).value=m.d||'';
+      wsRet.getCell(retRow,3).value=m.c||null;
+      wsRet.getCell(retRow,4).value=m.u||'buc';
+      wsRet.getCell(retRow,5).value=m.p||0;
+      wsRet.getCell(retRow,6).value=+val.toFixed(6);
+      [1].forEach(ci=>{data(wsRet.getCell(retRow,ci),C.ltGray,'0');});
+      [2,4].forEach(ci=>{data(wsRet.getCell(retRow,ci),C.ltGreen,null,false,'left');});
+      [3].forEach(ci=>{data(wsRet.getCell(retRow,ci),C.ltGreen,'0.000');});
+      [5,6].forEach(ci=>{data(wsRet.getCell(retRow,ci),C.ltGray,'0.000000');});
+      retRow++;
+    }
+
+    // Tool dev
+    setRow(wsRet,retRow,16);
+    wsRet.getCell(retRow,1).value='Dezvoltare Tool (valoare/4×MOQ)';
+    wsRet.mergeCells(retRow,1,retRow,5);
+    const tdv=a.toolDev?a.toolDev/(4*Math.max(+a.moq||1,1)):0;
+    wsRet.getCell(retRow,6).value=+tdv.toFixed(6);
+    data(wsRet.getCell(retRow,6),C.ltGray,'0.000000');
+    retRow++;
+
+    // MPI total
+    setRow(wsRet,retRow,16);
+    wsRet.getCell(retRow,1).value='TOTAL MATERIALE (MPI)';
+    wsRet.mergeCells(retRow,1,retRow,5);
+    wsRet.getCell(retRow,1).font={bold:true,size:9,name:'Calibri'};
+    wsRet.getCell(retRow,6).value=+r.mpi.toFixed(6);
+    data(wsRet.getCell(retRow,6),C.ltGray,'0.000000',true);
+    retRow++;
+
+    // Results header
+    setRow(wsRet,retRow,34);
+    const rh=['MPI\n[€/p]','Mat+SCRAP\n[€/p]','CPM\n[€/p]','MatTotal\n[€/p]',
+      'Utilaje\n[€/p]','Manoperă\n[€/p]','CAM\n[€/p]','Transport\n[€/p]',
+      'CD\n[€/p]','CI\n[€/p]','Cost\nProducție','Profit\n[€/p]',
+      'Total fără\nTVA [€/p]','Total fără\nTVA [€/1000p]'];
+    rh.forEach((l,ci)=>{
+      const fc=ci>=12?'7F6000':ci>=10?'1F6B75':'404040';
+      hdr(wsRet.getCell(retRow,ci+1),fc);wsRet.getCell(retRow,ci+1).value=l;
+    });
+    retRow++;
+
+    // Results values
+    setRow(wsRet,retRow,16);
+    const rv=[r.mpi,r.ms,r.cpmv,r.mt,r.cu,r.cm,r.camv,r.tv,r.cd,r.civ,r.cp,r.pv,r.tot,r.x1k];
+    rv.forEach((v,ci)=>{
+      const fc=ci>=12?C.ltYellow:ci>=10?'D5E8D4':C.ltGray;
+      data(wsRet.getCell(retRow,ci+1),fc,'0.000000',ci>=10||ci>=12);
+      wsRet.getCell(retRow,ci+1).value=+v.toFixed(6);
+    });
+    retRow++;
+
+    // spacer
+    setRow(wsRet,retRow,6);retRow++;
+  });
+
+  console.log('[Export] Sheet RETETA OK');
+  // ═══════════════════════════════════════════════════
+  // SHEET 3: CENTRALIZATOR
+  // ═══════════════════════════════════════════════════
+  const wsCen=wb.addWorksheet('CENTRALIZATOR');
+  title(wsCen,'  CENTRALIZATOR OFERTE  –  Calcul Cost Producție',1,16);
+  setRow(wsCen,2,14);
+  wsCen.getCell(2,1).value='  Adaugăți articole în rândurile de mai jos.';
+  wsCen.getCell(2,1).font={italic:true,size:9,name:'Calibri',color:{argb:'FF5A5A5A'}};
+  wsCen.mergeCells(2,1,2,16);
+
+  setRow(wsCen,4,42);
+  const cenHdrs=[
+    {l:'Nr.\nCrt',f:C.navy},{l:'Cod\nArticol',f:C.navy},{l:'Denumire Articol',f:C.navy},
+    {l:'Utilaj\nPrincipal',f:C.dkBlue},{l:'MOQ\n[buc]',f:C.dkGreen},{l:'SCRAP\n[%]',f:C.dkGreen},
+    {l:'MPI\n[€/piesă]',f:C.dkGreen},{l:'CPM\n[%]',f:C.dkGreen},{l:'CI\n[%]',f:C.dkGreen},
+    {l:'Profit\n[%]',f:C.dkGreen},
+    {l:'Cost\nProducție\n[€/piesă]',f:C.teal},{l:'Total fără\nTVA [€/piesă]',f:C.teal},
+    {l:'x1000',f:C.teal},{l:'',f:C.navy},
+    {l:'Preț Metoda Veche',f:'833C00'},{l:'x1000',f:'833C00'},
+  ];
+  cenHdrs.forEach((h,ci)=>{hdr(wsCen.getCell(4,ci+1),h.f);wsCen.getCell(4,ci+1).value=h.l;});
+  const cenW=[5,8,35,12,9,7,9,7,7,7,10,10,8,4,12,8];
+  cenW.forEach((w,i)=>{wsCen.getColumn(i+1).width=w;});
+
+  articles.forEach((a,idx)=>{
+    const r=cRet(a),pc=cPC(a);
+    const rn=5+idx;setRow(wsCen,rn,18);
+    const row=[idx+1,a.cod,a.denumire||null,(a.utilR||[])[0]||a.utilajPC,
+      a.moq,a.scrap,+r.mpi.toFixed(6),a.cpm,a.ci,a.profit,
+      +r.cp.toFixed(6),+r.tot.toFixed(6),+r.x1k.toFixed(4),null,
+      +pc.pretP.toFixed(6),+(pc.pretP*1000).toFixed(4)];
+    const fills=[null,null,C.ltGreen,C.ltGreen,C.ltGreen,C.ltGreen,C.ltGreen,C.ltGreen,C.ltGreen,C.ltGreen,
+      'D5E8D4','D5E8D4','D5E8D4',null,C.ltOrange,C.ltOrange];
+    const fmts=['0','@','@','@','#,##0','0.0%','0.000000','0.0%','0.0%','0.0%',
+      '0.000000','0.000000','0.00',null,'0.000000','0.00'];
+    row.forEach((v,ci)=>{
+      const cell=wsCen.getCell(rn,ci+1);cell.value=v;
+      data(cell,fills[ci],fmts[ci],ci>=10,ci===2?'left':'center');
+    });
+  });
+
+  console.log('[Export] Sheet CENTRALIZATOR OK');
+  // ═══ SHEET 4: Utilaje ═══
+  const wsUtl=wb.addWorksheet('Utilaje');
+  title(wsUtl,'  TABEL UTILAJE  –  Costuri şi Parametri per Utilaj',1,10);
+  setRow(wsUtl,3,34);
+  const utlHdrs=[
+    {l:'Nr.',f:C.navy},{l:'Utilaj',f:C.navy},
+    {l:'Cost/s\n[€/s]',f:C.dkGray},{l:'Cost/p\n[€/p]',f:C.dkGray},
+    {l:'Putere\n[kW]',f:C.dkGreen},{l:'Energie\n[€/kWh]',f:C.dkGreen},
+    {l:'Op.Tip1',f:C.dkGreen},{l:'Op.Tip2',f:C.dkGreen},{l:'Op.Tip3',f:C.dkGreen},
+    {l:'Timp/p\n[s]',f:C.dkGreen},
+  ];
+  utlHdrs.forEach((h,ci)=>{hdr(wsUtl.getCell(3,ci+1),h.f);wsUtl.getCell(3,ci+1).value=h.l;});
+  [5,22,12,12,9,9,7,7,7,8].forEach((w,i)=>{wsUtl.getColumn(i+1).width=w;});
+
+  utilajeDB.forEach((u,idx)=>{
+    if(u.name==='Empty')return;
+    const rn=4+idx;setRow(wsUtl,rn,16);
+    const cs=u.putere*u.energie/3600,cp=cs*u.timp;
+    const row=[idx+1,u.name,+cs.toFixed(8),+cp.toFixed(8),u.putere,u.energie,u.op1,u.op2,u.op3,u.timp];
+    const fills=[null,null,C.ltGray,C.ltGray,C.ltGreen,C.ltGreen,C.ltGreen,C.ltGreen,C.ltGreen,C.ltGreen];
+    const fmts=['0','@','0.00000000','0.00000000','0.##','0.00','0.##','0.##','0.##','0.##'];
+    row.forEach((v,ci)=>{
+      const cell=wsUtl.getCell(rn,ci+1);cell.value=v;
+      data(cell,fills[ci],fmts[ci],false,ci===1?'left':'center');
+    });
+  });
+
+  console.log('[Export] Sheet Utilaje OK');
+  // ═══════════════════════════════════════════════════
+  // SHEET 5: ReferinteTabel
+  // ═══════════════════════════════════════════════════
+  const wsRef=wb.addWorksheet('ReferinteTabel');
+  title(wsRef,'  TABEL DE REFERINȚĂ  –  Utilaje / DA-NU / Cifre Ceiling / Factori FM',1,8);
+  setRow(wsRef,3,16);
+  ['UTILAJE','','DA / NU','CIFRE CEILING','CAZ FM','MULTIPL. FM',''].forEach((l,ci)=>{
+    if(!l)return;const cell=wsRef.getCell(3,ci+2);cell.value=l;
+    cell.font={bold:true,size:9,name:'Calibri',color:{argb:'FFFFFFFF'}};
+    cell.fill=solid(C.navy);cell.alignment={horizontal:'center',vertical:'middle'};
+  });
+  [5,18,4,8,10,14,10].forEach((w,i)=>{wsRef.getColumn(i+1).width=w;});
+
+  const uNames=utilajeDB.filter(u=>u.name!=='Empty').map(u=>u.name);
+  const daNU=['DA','NU'];
+  const ceilNums=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
+
+  for(let i=0;i<Math.max(uNames.length,fmDB.length,ceilNums.length);i++){
+    const rn=4+i;setRow(wsRef,rn,15);
+    if(uNames[i]){
+      const c=wsRef.getCell(rn,2);c.value=uNames[i];
+      data(c,C.ltGreen,null,false,'left');
+    }
+    if(daNU[i]){const c=wsRef.getCell(rn,4);c.value=daNU[i];data(c,C.ltYellow);}
+    if(ceilNums[i]){const c=wsRef.getCell(rn,5);c.value=ceilNums[i];data(c,C.ltGray,'0');}
+    if(fmDB[i]){
+      const ck=wsRef.getCell(rn,6),cv=wsRef.getCell(rn,7);
+      ck.value=fmDB[i].key;data(ck,C.ltYellow,null,false,'left');
+      if(fmDB[i].val!=null){cv.value=fmDB[i].val;data(cv,C.ltGreen,'0.00',true);}
+      else{cv.value='N/A';data(cv,C.ltGray,null,true);}
+    }
+  }
+
+  // ═══ SCRIERE FIȘIER ═══
+  const d=new Date(),ds=d.getFullYear()+''+String(d.getMonth()+1).padStart(2,'0')+''+String(d.getDate()).padStart(2,'0');
+  const vStr=offer.versiune?'_v'+offer.versiune:'';
+  const safeNm=(nm||'export').replace(/[^\wÀ-ɏ]/g,'_').slice(0,30);
+  const filename=`Oferta_${safeNm}${vStr}_${ds}.xlsx`;
+
+  console.log('[Export] Toate sheet-urile OK. Se generează buffer...');
+  const buf=await wb.xlsx.writeBuffer();
+  console.log('[Export] Buffer generat, size:', buf.byteLength);
+  const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+
+  if(saveDir){
+    const ok=await writeToFolder(filename,blob);
+    if(ok){ showSaveConfirm(filename, saveDir.name); return; }
+  }
+  downloadBlob(blob,filename);
+  showDownloadConfirm(filename);
+
+  }catch(excelErr){ // ← CATCH GLOBAL
+    console.error('[Export] EROARE ExcelJS:', excelErr);
+    showToast('⚠ ExcelJS a eșuat — se încearcă export simplificat...','warn');
+    await new Promise(r=>setTimeout(r,500));
+    // ─── FALLBACK: export cu XLSX.js (fără formatare completă) ───
+    try{
+      exportWithXLSX(nm, dt);
+    }catch(xlsxErr){
+      console.error('[Export] EROARE XLSX.js:', xlsxErr);
+      showToast('❌ Export eșuat complet: '+excelErr.message,'err');
+      alert('Eroare la generarea Excel:\n\n' + excelErr.message +
+            '\n\nDetalii în Console (F12 → Console).\nEroare suplimentară XLSX.js: '+(xlsxErr.message||xlsxErr));
+    }
+  }
+}
+
+// ─── EXPORT FALLBACK cu XLSX.js ───
+function exportWithXLSX(nm, dt){
+  if(!window.XLSX){ alert('Nici XLSX.js nu este disponibil. Verificați conexiunea la internet.'); return; }
+  const wb2=XLSX.utils.book_new();
+
+  // Sheet 1: ProgramCalcul
+  const pcData=[['Nr','PRJ','Client','OEM','Proiect','SOP','Denumire','Set','Nr.p/Set','EYV','MOQ',
+    'Utilaj','Lung','Lat','Gros','Avans','Nr.p/Av','GapI','GapM','Cost/p(€)','Cost/Set(€)','FM','Preț/p(€)','Preț/Set(€)','NPD','Prod']];
+  articles.forEach((a,i)=>{
+    const pc=cPC(a);
+    pcData.push([i+1,a.prj||'',a.client||'',a.oem||'',a.proiect||'',a.sop||'',a.denumire||'',
+      a.set,a.nrps,a.eyv,a.moq,a.utilajPC,a.lung,a.lat,a.gros,a.avans,a.nrpa,a.gapI,a.gapM,
+      +pc.costP.toFixed(6),pc.costS!=null?+pc.costS.toFixed(6):'',
+      pc.fmd,+pc.pretP.toFixed(6),pc.pretS!=null?+pc.pretS.toFixed(6):'',a.npd||0,a.prod]);
+  });
+  XLSX.utils.book_append_sheet(wb2, XLSX.utils.aoa_to_sheet(pcData), 'ProgramCalcul');
+
+  // Sheet 2: CENTRALIZATOR
+  const cenData=[['Nr','Cod','Denumire','Utilaj','MOQ','SCRAP%','MPI(€/p)','CPM%','CI%','Profit%','CostProd(€/p)','Total(€/p)','x1000','Preț(€/p)','Prețx1000']];
+  articles.forEach((a,i)=>{
+    const r=cRet(a),pc=cPC(a);
+    cenData.push([i+1,a.cod,a.denumire,a.utilajPC,a.moq,a.scrap,+r.mpi.toFixed(6),
+      a.cpm,a.ci,a.profit,+r.cp.toFixed(6),+r.tot.toFixed(6),+r.x1k.toFixed(4),
+      +pc.pretP.toFixed(6),+(pc.pretP*1000).toFixed(4)]);
+  });
+  XLSX.utils.book_append_sheet(wb2, XLSX.utils.aoa_to_sheet(cenData), 'CENTRALIZATOR');
+
+  // Sheet 3: Utilaje
+  const utlData=[['Nr','Utilaj','Putere(kW)','Energie(€/kWh)','Op1(€/h)','Op2(€/h)','Op3(€/h)','Timp/p(s)']];
+  utilajeDB.filter(u=>u.name!=='Empty').forEach((u,i)=>{
+    utlData.push([i+1,u.name,u.putere,u.energie,u.op1,u.op2,u.op3,u.timp]);
+  });
+  XLSX.utils.book_append_sheet(wb2, XLSX.utils.aoa_to_sheet(utlData), 'Utilaje');
+
+  // Sheet 4: FM
+  const fmData=[['Caz FM','Multiplicator','Descriere']];
+  fmDB.forEach(f=>fmData.push([f.key,f.val!=null?f.val:'N/A',f.desc]));
+  XLSX.utils.book_append_sheet(wb2, XLSX.utils.aoa_to_sheet(fmData), 'ReferinteTabel');
+
+  const d=new Date(),ds=d.getFullYear()+''+String(d.getMonth()+1).padStart(2,'0')+''+String(d.getDate()).padStart(2,'0');
+  const safeNm=(nm||'export').replace(/[^a-zA-Z0-9]/g,'_').slice(0,30);
+  const vStr=offer.versiune?'_v'+offer.versiune:'';
+  const filename=`Oferta_${safeNm}${vStr}_${ds}_simple.xlsx`;
+
+  const wbout=XLSX.write(wb2,{bookType:'xlsx',type:'array'});
+  const blob=new Blob([wbout],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  downloadBlob(blob,filename);
+  showDownloadConfirm(filename+' (format simplificat — fără stilizare)');
+}
+
+// ═══ INIT ═══
+
+
+// === HELP ===
+function openHelp(){document.getElementById('helpModal').classList.add('on');}
+function closeHelp(){document.getElementById('helpModal').classList.remove('on');}
+function helpSection(id){
+  document.querySelectorAll('.help-sec').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.help-nav-item').forEach(n=>n.classList.remove('active'));
+  const sec=document.getElementById('help-'+id);
+  if(sec)sec.classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+// F1 = Help
+document.addEventListener('keydown',e=>{
+  if(e.key==='F1'){e.preventDefault();
+    const m=document.getElementById('helpModal');
+    m.classList.contains('on')?closeHelp():openHelp();
+  }
+});
+// Inchide la click pe backdrop
+document.getElementById('helpModal').addEventListener('click',e=>{
+  if(e.target===e.currentTarget)closeHelp();
+});
+
+// === COLLAPSE OFFER PANEL ===
+function toggleOfferPanel(){
+  const body=document.getElementById('offerPanelBody');
+  const arrow=document.getElementById('offerPanelArrow');
+  if(!body)return;
+  const isCollapsed=body.classList.contains('collapsed');
+  body.classList.toggle('collapsed',!isCollapsed);
+  if(arrow)arrow.classList.toggle('collapsed',!isCollapsed);
+  localStorage.setItem('offerPanelCollapsed',isCollapsed?'0':'1');
+}
+
+function initOfferPanelState(){
+  const collapsed=localStorage.getItem('offerPanelCollapsed')==='1';
+  if(collapsed){
+    const body=document.getElementById('offerPanelBody');
+    const arrow=document.getElementById('offerPanelArrow');
+    if(body)body.classList.add('collapsed');
+    if(arrow)arrow.classList.add('collapsed');
+  }
+}
+
+// === IMPORT OFERTA VECHE (Format XLSX Export PRJM) ===
+let _importLegacyArticles=[];
+
+const LEGACY_COL_MAP={
+  'PRJ':           {f:'prj',        t:'str'},
+  'Client':        {f:'client',     t:'str'},
+  'OEM':           {f:'oem',        t:'str'},
+  'Proiect':       {f:'proiect',    t:'str'},
+  'SOP':           {f:'sop',        t:'str'},
+  'Denumire':      {f:'denumire',   t:'str'},
+  'Set (DROPDOWN)':{f:'set',        t:'str'},
+  'Nr. Piese/Set (buc)':{f:'nrps',  t:'num'},
+  'EYV (buc)':     {f:'eyv',        t:'num'},
+  'MOQ (buc)':     {f:'moq',        t:'num'},
+  'Utilaj Folosit (DROPDOWN)':{f:'utilajPC',t:'str'},
+  'Lungime Piesa inaintare (mm)':{f:'lung',t:'num'},
+  'Latime Piesa (mm)':{f:'lat',     t:'num'},
+  'Grosime (mm)':  {f:'gros',       t:'num'},
+  'Avans (mm)':    {f:'avans',      t:'num'},
+  'Nr. Piese/Avans (buc)':{f:'nrpa',t:'num'},
+  'Gap Intre Piese (mm)':{f:'gapI', t:'num'},
+  'Gap Margine (mm)':{f:'gapM',     t:'num'},
+  'Factor Rotunjire Ceiling (DROPDOWN)':{f:'frot',t:'num'},
+  'Material MDE2': {f:'mde2', t:'str'},
+  'Material 1':    {f:'mde2', t:'str'},
+  'Material Folosit3':{f:'matf', t:'str'},
+  'Material 2':    {f:'matf', t:'str'},
+  'PrM4':          {f:'pm4',  t:'num'},
+  'Latime Log (mm)':{f:'latL',      t:'num'},
+  'Lungime Log (m)':{f:'lunL',      t:'num'},
+  'Pret/m^2 (EUR)': {f:'pretm2',   t:'num'},
+  'Pret/m^2 (€)':  {f:'pretm2',    t:'num'},
+  'Selectie FM (DROPDOWN)':{f:'selFM',t:'str'},
+  'New Product Development (EUR)':{f:'npd',t:'num'},
+  'New Product Development (€)':{f:'npd',t:'num'},
+};
+const LEGACY_COL_ALIASES={
+  'Material Folosit': {f:'matf',t:'str'},
+  'Utilaj Folosit':   {f:'utilajPC',t:'str'},
+};
+
+// Detectare header productivitate cu variante
+function getLegacyProdCol(headerRow){
+  let prodCol=-1;
+  headerRow.values.forEach((hdr,ci)=>{
+    if(hdr==null)return;
+    const h=String(hdr).replace(/\s+/g,' ').trim().toLowerCase();
+    if(h.includes('productivitate')&&h.includes('%'))prodCol=ci;
+  });
+  return prodCol;
+}
+
+async function importLegacyXLSX(input){
+  const file=input.files[0];
+  input.value='';
+  if(!file)return;
+
+  if(!window.ExcelJS){
+    showToast('Se incarca ExcelJS...','');
+    await new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
+      s.onload=res; s.onerror=rej;
+      document.head.appendChild(s);
+    });
+  }
+  if(!window.ExcelJS){showToast('ExcelJS indisponibil','err');return;}
+
+  showToast('Se citeste fisierul...','');
+  try{
+    const buf=await file.arrayBuffer();
+    const wb=new ExcelJS.Workbook();
+    await wb.xlsx.load(buf);
+
+    let ws=null;
+    wb.eachSheet(s=>{if(!ws&&s.rowCount>1)ws=s;});
+    if(!ws){showToast('Fisierul nu contine date!','err');return;}
+
+    let headerRow=null,headerIdx=0;
+    ws.eachRow((row,ri)=>{
+      if(!headerRow&&row.values.some(v=>v!=null&&String(v).trim()!=='')){
+        headerRow=row; headerIdx=ri;
+      }
+    });
+    if(!headerRow){showToast('Nu s-a gasit randul de header!','err');return;}
+
+    const colMap={};
+    headerRow.values.forEach((hdr,ci)=>{
+      if(hdr==null)return;
+      const h=String(hdr).trim();
+      const m=LEGACY_COL_MAP[h]||LEGACY_COL_ALIASES[h];
+      if(m)colMap[ci]=m;
+    });
+    // detectam coloana productivitate separat (are newline in header)
+    const prodCol=getLegacyProdCol(headerRow);
+    if(prodCol>0)colMap[prodCol]={f:'prod',t:'num'};
+
+    const foundFields=Object.values(colMap).map(m=>m.f);
+    const required=['denumire','eyv','moq'];
+    const missing=required.filter(f=>!foundFields.includes(f));
+    if(missing.length>0){
+      showToast('Coloane lipsa: '+missing.join(', '),'warn');
+    }
+
+    const parsed=[];
+    ws.eachRow((row,ri)=>{
+      if(ri<=headerIdx)return;
+      const vals=row.values;
+      if(!vals||vals.every(v=>v==null))return;
+      const hasData=Object.keys(colMap).some(ci=>vals[ci]!=null&&String(vals[ci]).trim()!=='');
+      if(!hasData)return;
+
+      const art=newArtObj();
+      Object.entries(colMap).forEach(([ci,m])=>{
+        const {f,t}=m;
+        let v=vals[ci];
+        if(v==null)return;
+        if(t==='num'){
+          const n=parseFloat(String(v).replace(',','.'));
+          if(!isNaN(n))art[f]=n;
+        }else{
+          const s=String(v).trim();
+          if(s!=='')art[f]=s;
+        }
+      });
+
+      if(art.set&&art.set.toUpperCase()==='DA')art.set='DA'; else art.set='NU';
+      if(art.prod!=null&&art.prod>0&&art.prod<1)art.prod=art.prod*100;
+      if(!art.selFM||art.selFM==='-')art.selFM='Auto';
+
+      parsed.push(art);
+    });
+
+    if(parsed.length===0){showToast('Nu s-au gasit articole valide!','err');return;}
+
+    _importLegacyArticles=parsed;
+    openImportLegacyModal(file.name,parsed);
+
+  }catch(e){
+    console.error('[Import Legacy]',e);
+    showToast('Eroare la citire: '+e.message,'err');
+  }
+}
+
+function openImportLegacyModal(fileName,arts){
+  const info=document.getElementById('importLegacyInfo');
+  if(info)info.innerHTML='<b>Fisier:</b> '+xe(fileName)+' &nbsp;|&nbsp; <b>'+arts.length+' articole</b> detectate';
+  const tbody=document.getElementById('importLegacyPreview');
+  if(tbody){
+    tbody.innerHTML=arts.map((a,i)=>
+      '<tr style="background:'+(i%2===0?'#f8f9fa':'#fff')+'">'
+      +'<td style="padding:4px 8px;text-align:center;color:var(--muted)">'+(i+1)+'</td>'
+      +'<td style="padding:4px 8px;font-weight:600">'+xe(a.denumire||'—')+'</td>'
+      +'<td style="padding:4px 8px;text-align:center">'+xe(String(a.prj||'—'))+'</td>'
+      +'<td style="padding:4px 8px">'+xe(a.client||'—')+'</td>'
+      +'<td style="padding:4px 8px;font-size:.75em">'+xe(a.utilajPC||'—')+'</td>'
+      +'<td style="padding:4px 8px;text-align:right">'+(+a.eyv||0).toLocaleString('ro')+'</td>'
+      +'<td style="padding:4px 8px;text-align:right">'+(+a.moq||0).toLocaleString('ro')+'</td>'
+      +'<td style="padding:4px 8px;font-size:.75em;color:#1565C0">'+xe(a.mde2||a.matf||'—')+'</td>'
+      +'</tr>'
+    ).join('');
+  }
+  document.getElementById('importLegacyModal').classList.add('on');
+}
+
+function closeImportLegacyModal(){
+  document.getElementById('importLegacyModal').classList.remove('on');
+  _importLegacyArticles=[];
+}
+
+function confirmImportLegacy(){
+  if(!_importLegacyArticles||_importLegacyArticles.length===0)return;
+  const mode=document.querySelector('input[name="importMode"]:checked')?.value||'add';
+  const n=_importLegacyArticles.length;
+
+  if(mode==='replace'){
+    articles=_importLegacyArticles.slice();
+    // Renumerotam de la 1 indiferent de nextId-ul anterior
+    articles.forEach((a,i)=>{a.id=i+1;a.cod='ART'+String(i+1).padStart(2,'0');});
+    nextId=safeNextId();
+  }else{
+    // Continuam de la numarul de articole existente
+    const startMax=articles.length?Math.max(...articles.map(a=>a.id)):0;
+    _importLegacyArticles.forEach((a,i)=>{
+      a.id=startMax+i+1;
+      a.cod='ART'+String(articles.length+i+1).padStart(2,'0');
+    });
+    articles=[...articles,..._importLegacyArticles];
+    nextId=safeNextId();
+  }
+
+  if(!document.getElementById('ofProiect').value&&_importLegacyArticles[0]?.prj){
+    document.getElementById('ofProiect').value=_importLegacyArticles[0].prj;
+    markDirty();
+  }
+
+  closeImportLegacyModal();
+  recalcAll();
+  renderPC();
+  renderDash();
+  saveCurrentState();
+  showToast('Import finalizat: '+n+' articole importate!','ok');
+}
+
+// ===============================================
+// INITIALIZARE
+// ===============================================
+(async function init(){
+  // Restauram folderul PRIMUL - inainte de orice render
+  await restoreSavedFolder();
+  // Incarca baza de date personala din Supabase
+  var sbDB = await sbLoadShared(DB_KEY);
+  if(sbDB !== null) localStorage.setItem(DB_KEY, JSON.stringify(sbDB));
+  const storedPath=localStorage.getItem('SAVE_DIR_PATH')||'';
+  if(storedPath){
+    saveDirPath=storedPath;
+    const inp=document.getElementById('saveDirPathInput');
+    if(inp)inp.value=storedPath;
+  }
+  initOfferPanelState();
+  loadCurrentState();
+  // Migrare pm1/pm2/pm3: articole vechi cu pretm2 setat
+  articles.forEach(a=>{if((!a.pm1&&!a.pm2&&!a.pm3)&&a.pretm2){a.pm1=a.pretm2;}if(a.pm4===undefined)a.pm4=0;});
+  // Sincronizam utilR[0] cu utilajPC pentru articolele existente
+  articles.forEach(a=>{if(a.utilajPC&&a.utilajPC!=='Empty'){if(!a.utilR)a.utilR=['Empty','Empty','Empty','Empty','Empty'];if(!a.utilR[0]||a.utilR[0]==='Empty')a.utilR[0]=a.utilajPC;}});
+  syncOfferFields();
+  renderPC();
+  renderFM();
+  renderDash();
+  updateSablonInfo();
+  // Realtime (date comune)
+  _getSb().channel('shared-rt-oferta')
+    .on('postgres_changes',{event:'*',schema:'public',table:'shared_data',filter:'key=eq.'+DB_KEY},function(payload){
+      if(!payload.new) return;
+      localStorage.setItem(DB_KEY, JSON.stringify(payload.new.value));
+      // Actualizeaza lista versiuni daca e deschisa
+      if(document.getElementById('loadModal') && document.getElementById('loadModal').style.display!=='none') filterVers();
+    })
+    .subscribe();
+})();
+// ===== Resizable Columns =====
+function initTableResize() {
+  const table = document.getElementById('tPC');
+  if (!table) return;
+  const thead = table.querySelector('thead');
+  const rows = Array.from(thead.querySelectorAll('tr'));
+
+  // Build grid map: each th -> {colStart, colEnd, colspan, rowspan}
+  const grid = [];
+  const thColMap = new Map();
+  rows.forEach((row, ri) => {
+    if (!grid[ri]) grid[ri] = [];
+    let ci = 0;
+    Array.from(row.querySelectorAll('th')).forEach(th => {
+      while (grid[ri][ci]) ci++;
+      const cs = parseInt(th.getAttribute('colspan') || '1');
+      const rs = parseInt(th.getAttribute('rowspan') || '1');
+      for (let r = ri; r < ri + rs; r++) {
+        if (!grid[r]) grid[r] = [];
+        for (let c = ci; c < ci + cs; c++) grid[r][c] = th;
+      }
+      thColMap.set(th, { colStart: ci, colEnd: ci + cs - 1, colspan: cs, rowspan: rs });
+      ci += cs;
+    });
+  });
+
+  // Map col index -> leaf th (row-1 sub-headers or rowspan=2 from row-0)
+  const colOwner = {};
+  if (grid[1]) grid[1].forEach((th, ci) => { if (th) colOwner[ci] = th; });
+  if (grid[0]) grid[0].forEach((th, ci) => {
+    if (th && parseInt(th.getAttribute('rowspan')||'1') === 2) colOwner[ci] = th;
+  });
+
+  // Load & apply saved widths
+  let sw = {};
+  try { sw = JSON.parse(localStorage.getItem('pcColWidths') || '{}'); } catch(e) {}
+  Object.entries(colOwner).forEach(([ci, th]) => {
+    if (sw[ci]) { th.style.width = sw[ci]+'px'; th.style.minWidth = sw[ci]+'px'; }
+  });
+
+  // Add resize handles to ALL th in both rows
+  thead.querySelectorAll('th').forEach(th => {
+    const old = th.querySelector('.col-resizer');
+    if (old) old.remove();
+    const info = thColMap.get(th);
+    if (!info) return;
+
+    const resizer = document.createElement('div');
+    resizer.className = 'col-resizer';
+    th.appendChild(resizer);
+
+    let startX, startW, targetTh;
+    resizer.addEventListener('mousedown', function(e) {
+      e.preventDefault(); e.stopPropagation();
+      startX = e.pageX;
+      targetTh = colOwner[info.colEnd] || th;
+      startW = targetTh.offsetWidth;
+      resizer.classList.add('dragging');
+
+      function onMove(e) {
+        const newW = Math.max(28, startW + (e.pageX - startX));
+        targetTh.style.width = newW + 'px';
+        targetTh.style.minWidth = newW + 'px';
+      }
+      function onUp() {
+        resizer.classList.remove('dragging');
+        let widths = {};
+        Object.entries(colOwner).forEach(([ci, th]) => { widths[ci] = th.offsetWidth; });
+        localStorage.setItem('pcColWidths', JSON.stringify(widths));
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  });
+}
+
+// ═══ ȘABLON UTILAJE + FM ═══
+function saveSablon(){
+  const s={utilajeDB:JSON.parse(JSON.stringify(utilajeDB)),
+           fmDB:JSON.parse(JSON.stringify(fmDB)),
+           savedAt:new Date().toISOString()};
+  localStorage.setItem('calcul_oferta_sablon_v1',JSON.stringify(s));
+  const dt=new Date(s.savedAt).toLocaleDateString('ro-RO')+' '+
+           new Date(s.savedAt).toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit'});
+  showToast('✓ Șablon salvat ('+dt+')','ok');
+  updateSablonInfo();
+}
+function getSablon(){
+  try{return JSON.parse(localStorage.getItem('calcul_oferta_sablon_v1')||'null');}catch(e){return null;}
+}
+function updateSablonInfo(){
+  const s=getSablon();
+  const el=document.getElementById('sablonInfo');
+  const el2=document.getElementById('sablonBtnInfo');
+  if(!s){
+    if(el)el.textContent='Niciun șablon salvat';
+    if(el2)el2.textContent='Niciun șablon salvat — mergeți la Utilaje și salvați mai întâi';
+    return;
+  }
+  const dt=new Date(s.savedAt).toLocaleDateString('ro-RO')+' '+
+           new Date(s.savedAt).toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit'});
+  if(el)el.textContent='Șablon: '+dt;
+  if(el2)el2.textContent='Folosește parametrii șablonului salvat la '+dt;
+}
+function openNewOfferModal(){
+  if(isDirty&&!confirm('Aveți modificări nesalvate. Continuați?'))return;
+  updateSablonInfo();
+  const s=getSablon();
+  const btn=document.getElementById('btnSablon');
+  if(btn)btn.style.opacity=s?'1':'0.5';
+  document.getElementById('newOfferModal').classList.add('on');
+}
+function closeNewOfferModal(){document.getElementById('newOfferModal').classList.remove('on');}
+function newOfferFromSablon(){
+  const s=getSablon();
+  if(!s){showToast('Nu există niciun șablon salvat. Mergeți la Utilaje → 📌 Salvează ca Șablon.','err');return;}
+  utilajeDB=JSON.parse(JSON.stringify(s.utilajeDB));
+  fmDB=JSON.parse(JSON.stringify(s.fmDB));
+  _doNewOffer();
+  closeNewOfferModal();
+  showToast('✓ Ofertă nouă cu valorile din Șablon','ok');
+}
+let _pendingNewOffer=false;
+function newOfferFromProject(){
+  closeNewOfferModal();
+  _pendingNewOffer=true;
+  openLoadModal();
+}
+function loadVersion(id){
+  if(_pendingNewOffer){
+    _pendingNewOffer=false;
+    const db=getDB();const v=db.versions.find(x=>x.id===id);if(!v)return;
+    if(v.utilajeDB)utilajeDB=JSON.parse(JSON.stringify(v.utilajeDB));
+    if(v.fmDB&&v.fmDB.length)fmDB=JSON.parse(JSON.stringify(v.fmDB));
+    _doNewOffer();
+    closeLoadModal();
+    showToast('✓ Ofertă nouă cu referințele din "'+v.denumire+' v'+v.versiune+'"','ok');
+    return;
+  }
+  const db=getDB();const v=db.versions.find(x=>x.id===id);if(!v)return;
+  if(isDirty&&!confirm('Aveți modificări nesalvate. Încărcați oricum?'))return;
+  articles=JSON.parse(JSON.stringify(v.articles||[]));
+  utilajeDB=v.utilajeDB?JSON.parse(JSON.stringify(v.utilajeDB)):utilajeDB;
+  if(v.fmDB&&Array.isArray(v.fmDB)&&v.fmDB.length){fmDB=JSON.parse(JSON.stringify(v.fmDB));}
+  else{mergeFmDB(v.fmDB);}
+  nextId=safeNextId();
+  offer={id:v.id,denumire:v.denumire,data:v.data,proiect:v.proiect,versiune:v.versiune,savedAt:v.savedAt};
+  isDirty=false;saveCurrentState();syncOfferFields();renderPC();renderFM();closeLoadModal();
+  showToast('✓ Încărcat: "'+v.denumire+'" v'+v.versiune,'ok');
+  document.getElementById('saveStatus').textContent='✓ Încărcat: "'+v.denumire+'" v'+v.versiune;
+  showTab('pc',document.querySelector('.ntab:nth-child(2)'));
+}
+function _doNewOffer(){
+  articles=[];nextId=1;
+  offer={id:null,denumire:'',data:today(),proiect:'',versiune:null,savedAt:null};
+  isDirty=false;saveCurrentState();syncOfferFields();renderPC();renderFM();renderUtl();
+  document.getElementById('saveStatus').textContent='● ofertă nouă';
+  showTab('pc',document.querySelector('.ntab:nth-child(2)'));
+}
+
+// ═══ IMPORT MDE FORMAT (ProgramCalcul/RETETA/Utilaje/ReferinteTabel) ═══
+let _importMDEArticles=[], _importMDEUtilaje=null, _importMDEFM=null;
+
+async function handleImportXLSX(input){
+  const file=input.files[0]; input.value=''; if(!file)return;
+  if(!window.ExcelJS){
+    showToast('Se încarcă ExcelJS...','');
+    await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';s.onload=res;s.onerror=rej;document.head.appendChild(s);});
+  }
+  if(!window.ExcelJS){showToast('ExcelJS indisponibil','err');return;}
+  showToast('Se citește fișierul...','');
+  try{
+    const buf=await file.arrayBuffer();
+    const wb=new ExcelJS.Workbook();
+    await wb.xlsx.load(buf);
+    // Auto-detect format
+    const wsPC=wb.getWorksheet('ProgramCalcul');
+    if(wsPC){
+      await parseMDEFormat(wb, file.name);
+    } else {
+      // Fall back to legacy PRJM import
+      const inp=document.createElement('input');
+      inp._buf=buf; inp._fname=file.name; inp._wb=wb;
+      await importLegacyFromWB(wb, file.name);
+    }
+  }catch(e){console.error('[Import]',e);showToast('Eroare: '+e.message,'err');}
+}
+
+async function parseMDEFormat(wb, fname){
+  const wsPC=wb.getWorksheet('ProgramCalcul');
+  // Detect column version: check col 28 header text
+  const hdr28=(wsPC.getRow(4).getCell(28).text||'').replace(/\n/g,' ');
+  const isNew44=hdr28.includes('PrM1'); // supports both 44 and 45-col
+  const sv=(row,ci)=>{const c=row.getCell(ci);return c.value;};
+  const sn=(row,ci)=>{const v=sv(row,ci);return typeof v==='number'?v:parseFloat(String(v||0).replace(',','.'))||0;};
+  const ss=(row,ci)=>{const v=sv(row,ci);return v!=null?String(v).trim():'';};
+
+  const arts=[];
+  wsPC.eachRow((row,ri)=>{
+    if(ri<=5)return;
+    const v1=sv(row,1);
+    if(v1==null||typeof v1==='string'&&isNaN(parseInt(v1)))return;
+    if(!sv(row,7))return; // no denumire
+    const a=newArtObj();
+    a.prj=ss(row,2); a.client=ss(row,3); a.oem=ss(row,4);
+    a.proiect=ss(row,5); a.sop=ss(row,6); a.denumire=ss(row,7);
+    a.set=ss(row,8)==='DA'?'DA':'NU';
+    a.nrps=sn(row,9); a.eyv=sn(row,10); a.moq=sn(row,11);
+    a.utilajPC=ss(row,12);
+    a.lung=sn(row,13); a.lat=sn(row,14); a.gros=sn(row,15);
+    a.avans=sn(row,16); a.nrpa=sn(row,17); a.gapI=sn(row,18); a.gapM=sn(row,19);
+    a.frot=sn(row,22)||1;
+    a.mde2=ss(row,24); a.matf=ss(row,25);
+    a.latL=sn(row,26)||300; a.lunL=sn(row,27)||50;
+    if(isNew44){
+      a.pm1=sn(row,28); a.pm2=sn(row,29); a.pm3=sn(row,30);
+      // col 31 = PrM4 (45-col) or PrMt calculated (44-col)
+      const col31hdr=(wsPC.getRow(4).getCell(31).text||'').replace(/\n/g,' ');
+      a.pm4=col31hdr.includes('PrM4')?sn(row,31):0;
+      const colOff=col31hdr.includes('PrM4')?1:0;
+      a.selFM=ss(row,40-colOff)||ss(row,39)||'Auto'; a.npd=sn(row,44+colOff-1)||sn(row,43); a.prod=sn(row,45+colOff-1)||sn(row,44);
+    }else{
+      a.pm1=sn(row,28); a.pm2=0; a.pm3=0; a.pm4=0; a.pretm2=a.pm1;
+      a.selFM=ss(row,36)||'Auto'; a.npd=sn(row,40); a.prod=sn(row,41);
+    }
+    if(a.prod>0&&a.prod<1)a.prod=a.prod*100;
+    if(!a.selFM||a.selFM==='-')a.selFM='Auto';
+    arts.push(a);
+  });
+
+  // Parse RETETA for detailed recipe fields
+  const wsRet=wb.getWorksheet('RETETA');
+  if(wsRet){
+    arts.forEach((a,idx)=>{
+      const br=47+idx*16;
+      const dr=wsRet.getRow(br+2); // data row: cpm,cam,ci,profit,op1r,op2r,op3r,moq,scrap,transp
+      const er=wsRet.getRow(br+4); // energy row: energie,gdif,tset,utilR[0..4]
+      a.cpm=sn(dr,2); a.cam=sn(dr,3); a.ci=sn(dr,4); a.profit=sn(dr,5);
+      a.op1r=sn(dr,6)||7; a.op2r=sn(dr,7)||9; a.op3r=sn(dr,8)||12;
+      a.scrap=sn(dr,10); a.transp=sn(dr,11);
+      a.energie=sn(er,2)||0.5; a.gdif=sn(er,3)||1; a.tset=sn(er,4)||40;
+      a.utilR=[ss(er,5)||a.utilajPC||'Empty',ss(er,6)||'Empty',ss(er,7)||'Empty',ss(er,8)||'Empty',ss(er,9)||'Empty'];
+      a.mat=[{d:'',c:null,u:'buc',p:0}];
+      for(let mi=0;mi<5;mi++){
+        const mr=wsRet.getRow(br+6+mi);
+        const d=ss(mr,3),c=sv(mr,4),u=ss(mr,5)||'buc',p=sn(mr,6);
+        a.mat[mi+1]={d,c:(c!=null&&c!=='')?+c:null,u,p};
+      }
+      a.toolDev=sn(wsRet.getRow(br+11),7);
+    });
+  }
+
+  // Parse Utilaje
+  let utls=null;
+  const wsUtl=wb.getWorksheet('Utilaje');
+  if(wsUtl){
+    utls=[];
+    wsUtl.eachRow((row,ri)=>{
+      if(ri<=3)return;
+      const nm=ss(row,2); if(!nm)return;
+      utls.push({name:nm,putere:sn(row,5)||2,energie:sn(row,6)||0.5,
+        op1:sn(row,7),op2:sn(row,8),op3:sn(row,9),timp:sn(row,10)||2});
+    });
+  }
+
+  // Parse FM from ReferinteTabel
+  let fm=null;
+  const wsRef=wb.getWorksheet('ReferinteTabel');
+  if(wsRef){
+    fm=[];
+    wsRef.eachRow((row,ri)=>{
+      if(ri<=3)return;
+      const key=(ss(row,6)||'').trim(); if(!key||key.startsWith('Tabelul'))return;
+      const val=sv(row,7);
+      const num=typeof val==='number'?val:parseFloat(String(val||'').replace(',','.'));
+      if(key&&!isNaN(num)){fm.push({key,val:num,desc:''});}
+      else if(key){const ex=fmDB.find(f=>f.key===key);if(ex)fm.push({...ex});}
+    });
+  }
+
+  if(!arts.length){showToast('Nu s-au găsit articole valide!','err');return;}
+  _importMDEArticles=arts; _importMDEUtilaje=utls; _importMDEFM=fm;
+  openImportMDEModal(fname, arts, utls, fm);
+}
+
+function openImportMDEModal(fname, arts, utls, fm){
+  document.getElementById('iMDEFileName').textContent=fname;
+  document.getElementById('iMDEUtilaje').disabled=!utls;
+  document.getElementById('iMDEFM').disabled=!fm;
+  if(!utls)document.getElementById('iMDEUtilaje').checked=false;
+  if(!fm)document.getElementById('iMDEFM').checked=false;
+  document.getElementById('iMDEPreview').innerHTML=
+    '<table style="width:100%;border-collapse:collapse">'+
+    '<thead><tr style="background:#1e3a5f;color:#fff"><th style="padding:3px 6px">#</th><th>Denumire</th><th>PRJ</th><th>Utilaj</th><th>MOQ</th><th>Mat1</th></tr></thead><tbody>'+
+    arts.map((a,i)=>`<tr style="background:${i%2?'#F5F8FF':'#fff'}">
+      <td style="padding:2px 6px;text-align:center">${i+1}</td>
+      <td style="padding:2px 6px">${xe(a.denumire||'—')}</td>
+      <td style="padding:2px 6px;text-align:center">${xe(a.prj||'—')}</td>
+      <td style="padding:2px 6px">${xe(a.utilajPC||'—')}</td>
+      <td style="padding:2px 6px;text-align:right">${(a.moq||0).toLocaleString('ro-RO')}</td>
+      <td style="padding:2px 6px">${xe(a.mde2||'—')}</td></tr>`).join('')+
+    '</tbody></table>'+
+    `<div style="margin-top:6px;font-size:.78em;color:#555">
+      ${arts.length} articole detectate${utls?` · ${utls.length} utilaje`:''}${fm?` · ${fm.length} factori FM`:''}
+    </div>`;
+  document.getElementById('importMDEModal').classList.add('on');
+}
+
+function closeImportMDEModal(){document.getElementById('importMDEModal').classList.remove('on');}
+
+function confirmImportMDE(){
+  if(!_importMDEArticles.length)return;
+  const mode=document.querySelector('input[name="importMDEMode"]:checked')?.value||'replace';
+  const doUtl=document.getElementById('iMDEUtilaje').checked&&_importMDEUtilaje;
+  const doFM=document.getElementById('iMDEFM').checked&&_importMDEFM;
+
+  if(mode==='replace'){
+    articles=_importMDEArticles.slice();
+    articles.forEach((a,i)=>{a.id=i+1;a.cod='ART'+String(i+1).padStart(2,'0');});
+  }else{
+    const startMax=articles.length?Math.max(...articles.map(a=>a.id)):0;
+    _importMDEArticles.forEach((a,i)=>{
+      a.id=startMax+i+1;
+      a.cod='ART'+String(articles.length+i+1).padStart(2,'0');
+    });
+    articles=[...articles,..._importMDEArticles];
+  }
+  nextId=safeNextId();
+
+  if(doUtl&&_importMDEUtilaje.length){utilajeDB=_importMDEUtilaje;renderUtl();}
+  if(doFM&&_importMDEFM.length){
+    _importMDEFM.forEach(fi=>{const ex=fmDB.find(f=>f.key===fi.key);if(ex)ex.val=fi.val;else fmDB.push(fi);});
+    renderFM();
+  }
+
+  if(!document.getElementById('ofProiect').value&&_importMDEArticles[0]?.prj)
+    document.getElementById('ofProiect').value=_importMDEArticles[0].prj;
+
+  closeImportMDEModal();
+  recalcAll(); renderPC(); renderDash(); saveCurrentState();
+  showToast(`✓ Importat ${_importMDEArticles.length} articole din format MDE`+(doUtl?' + utilaje':'')+(doFM?' + FM':''),'ok');
+  _importMDEArticles=[]; _importMDEUtilaje=null; _importMDEFM=null;
+}
+
+// Wrapper to call old legacy import from workbook already loaded
+async function importLegacyFromWB(wb, fname){
+  let ws=null;
+  wb.eachSheet(s=>{if(!ws&&s.rowCount>1)ws=s;});
+  if(!ws){showToast('Fișierul nu conține date!','err');return;}
+  let headerRow=null,headerIdx=0;
+  ws.eachRow((row,ri)=>{if(!headerRow&&row.values.some(v=>v!=null&&String(v).trim()!=='')){{headerRow=row;headerIdx=ri;}}});
+  if(!headerRow){showToast('Nu s-a găsit rândul de header!','err');return;}
+  const colMap={};
+  headerRow.values.forEach((hdr,ci)=>{if(hdr==null)return;const h=String(hdr).trim();const m=LEGACY_COL_MAP[h]||LEGACY_COL_ALIASES[h];if(m)colMap[ci]=m;});
+  const prodCol=getLegacyProdCol(headerRow);
+  if(prodCol>0)colMap[prodCol]={f:'prod',t:'num'};
+  const parsed=[];
+  ws.eachRow((row,ri)=>{
+    if(ri<=headerIdx)return;
+    const vals=row.values;
+    if(!vals||vals.every(v=>v==null))return;
+    const hasData=Object.keys(colMap).some(ci=>vals[ci]!=null&&String(vals[ci]).trim()!=='');
+    if(!hasData)return;
+    const art=newArtObj();
+    Object.entries(colMap).forEach(([ci,m])=>{
+      const {f,t}=m;let v=vals[ci];if(v==null)return;
+      if(t==='num'){const n=parseFloat(String(v).replace(',','.'));if(!isNaN(n))art[f]=n;}
+      else{const s=String(v).trim();if(s!=='')art[f]=s;}
+    });
+    if(art.set&&art.set.toUpperCase()==='DA')art.set='DA';else art.set='NU';
+    if(art.prod!=null&&art.prod>0&&art.prod<1)art.prod=art.prod*100;
+    if(!art.selFM||art.selFM==='-')art.selFM='Auto';
+    parsed.push(art);
+  });
+  if(!parsed.length){showToast('Nu s-au găsit articole valide!','err');return;}
+  _importLegacyArticles=parsed;
+  openImportLegacyModal(fname,parsed);
+}
+
+</script>
+</body>
+</html>

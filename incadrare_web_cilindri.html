@@ -413,6 +413,7 @@ async function sbSaveUser(key,value){try{var sb=_getSb();if(!sb)return;var uid=a
         <div class="stat"><span>🔵 Piese A</span><span class="sv" id="mCountA">0</span></div>
         <div class="stat"><span>🟡 Piese B</span><span class="sv" id="mCountB">0</span></div>
         <div class="stat"><span>Total piese</span><span class="sv" id="mTotal">0</span></div>
+        <div class="stat"><span>📐 Gabarit selecție</span><span class="sv" id="mGabarit">—</span></div>
       </div>
       <div class="row" style="margin-bottom:4px">
         <button class="bs" onclick="undoLast()">↩ Anulează</button>
@@ -2604,7 +2605,7 @@ function snapOffset(group,targets,sp){
     for(const cp of cand) for(const p of group)
       for(const v of p) for(const w of cp){
         const dx=w.x-v.x,dy=w.y-v.y;
-        if(dx*dx+dy*dy<=R*R) options.push({dx,dy,vx:1});   // vx=1 → prioritate (fagure exact)
+        if(dx*dx+dy*dy<=R*R) options.push({dx,dy,vx:3});   // vx=3 → aceeași prioritate: vârf-pe-vârf disponibil ca și latură/vârf-mijloc (câștigă cel mai aproape de cursor)
       }
   }
   // 1b) MUCHIE-PE-MUCHIE: aliniere mijloc-latură pe mijloc-latură, la distanța sp.
@@ -2619,9 +2620,9 @@ function snapOffset(group,targets,sp){
         for(const t of te) for(const g of ge){
           if(g.nx*t.nx+g.ny*t.ny > -0.9) continue;         // trebuie să se privească
           const dx=t.mx+t.nx*gap-g.mx, dy=t.my+t.ny*gap-g.my;
-          // vx:2 → PRIORITAR peste vârf-pe-vârf: preferă lipirea muchie-pe-muchie
-          // (fagure strâns) chiar dacă tragi mai pe orizontală (evită contactul în vârf).
-          if(dx*dx+dy*dy<=R*R) options.push({dx,dy,vx:2});
+          // vx:3 → aceeași prioritate ca vârf-pe-mijloc-latură: AMBELE sunt disponibile,
+          // iar câștigă cea mai aproape de cursor (poziționezi pe muchie → latură-peste-latură).
+          if(dx*dx+dy*dy<=R*R) options.push({dx,dy,vx:3});
         }
       }
     }
@@ -2670,8 +2671,8 @@ function snapOffset(group,targets,sp){
     for(let it=0;it<20;it++){const m=(lo+hi)/2; if(dAt(m)>=spEff) hi=m; else lo=m;}
     options.push({dx:ux*hi,dy:uy*hi});
   }
-  // alege candidatul valid: întâi alinierile vârf-pe-vârf (fagure exact),
-  // apoi după deplasarea cea mai mică (cel mai aproape de cursor)
+  // alege candidatul valid: întâi lipirile la muchie/mijloc-latură (vx3 — latură-peste-latură
+  // SAU vârf-pe-mijloc-latură, câștigă cea mai aproape de cursor), apoi vârf-pe-vârf (vx1)
   options.sort((a,b)=>(b.vx||0)-(a.vx||0)||((a.dx*a.dx+a.dy*a.dy)-(b.dx*b.dx+b.dy*b.dy)));
   for(const o of options.slice(0,150)) if(validAt(o.dx,o.dy)) return o;
   return null;
@@ -2746,6 +2747,14 @@ function clearManual(){
   placedPieces=[]; pieceColorIdx=0; selectedIdxs.clear();
   document.getElementById('fillInfo').textContent='';
   updateManualStats(); drawCanvas();
+}
+function updateSelInfo(){
+  const el=document.getElementById('mGabarit'); if(!el) return;
+  if(mode!=='manual'||!selectedIdxs||selectedIdxs.size===0){ el.textContent='—'; return; }
+  const polys=[...selectedIdxs].map(i=>placedPieces[i]).filter(Boolean).map(p=>p.poly);
+  if(!polys.length){ el.textContent='—'; return; }
+  const bb=combinedBBox(...polys);
+  el.textContent=bb.w.toFixed(1)+' × '+bb.h.toFixed(1)+' mm'+(selectedIdxs.size>1?(' · '+selectedIdxs.size+' pc'):'');
 }
 function updateManualStats(){
   const a=placedPieces.filter(p=>p.type==='A').length;
@@ -3030,6 +3039,7 @@ function drawCanvas(){
   ctx.strokeRect(0,0,webW,webH);
   ctx.restore();
   drawRulers();drawScaleBar();
+  if(typeof updateSelInfo==='function') updateSelInfo();
 }
 
 function drawManualPiece(p, isPreview){
@@ -4094,6 +4104,46 @@ let cilUserPick=null;
 let cilLastBestCirc=null;
 
 // opts.preservePick=true → recalcul automat (nu suprascrie alegerea utilizatorului)
+// Baleiaj de orientări pentru piesa A (rotesc piesa 0..360° cu pasul din UI).
+// Rezultatul e cache-uit (se recalculează doar la schimbarea piesei / distanței / pasului).
+let _cilOri={poly:null,sp:null,step:null,list:null};
+function cilOrientations(){
+  if(!polygon) return [];
+  const sp=+document.getElementById('spacing').value||0;
+  const stp=Math.max(2,parseInt(document.getElementById('rotStep')?.value)||5);
+  if(_cilOri.list&&_cilOri.poly===polygon&&_cilOri.sp===sp&&_cilOri.step===stp) return _cilOri.list;
+  const list=[];
+  for(let deg=0;deg<360;deg+=stp){
+    const sP=simplifyPoly(rotatePoly(polygon,deg),90);
+    const P0=findGroupStep([sP],sp,'x');
+    const bb=getBBox(sP);
+    list.push({deg,P0,bw:bb.w,bh:bb.h});
+  }
+  _cilOri={poly:polygon,sp,step:stp,list};
+  return list;
+}
+// Cea mai bună orientare care ÎNCAPE pe fața cilindrului (lățime ≤ faceW) și dă
+// cele mai multe buc/m pe circumferința F. Întoarce {best, anyWidth, anyLen, minWidth}.
+function cilBestOriForFace(oris,faceW,F,brd,sp,unit){
+  let best=null,anyLen=false,anyWidth=false,minWidth=Infinity;
+  for(const o of oris){
+    const width=o.bh+2*brd;
+    if(width<minWidth) minWidth=width;
+    const fitsW=width<=faceW+1e-6;
+    const reps=Math.floor(F/o.P0+1e-9);
+    const fitsLen=reps>=1;
+    if(fitsW) anyWidth=true;
+    if(fitsLen) anyLen=true;
+    if(!fitsW||!fitsLen) continue;
+    const gap=F/reps-o.P0+sp;
+    const pieces=reps*(unit||1);
+    const pcsM=pieces*1000/F;
+    if(!best||pcsM>best.pcsM+1e-9||(Math.abs(pcsM-best.pcsM)<1e-9&&width<best.width-1e-6))
+      best={deg:o.deg,P0:o.P0,width,reps,gap,pieces,pcsM};
+  }
+  return {best,anyLen,anyWidth,minWidth:isFinite(minWidth)?minWidth:null};
+}
+
 function gasesteCilindri(opts){
   const preserve = !!(opts&&opts.preservePick);
   if(!cilindri) cilLoad();
@@ -4106,29 +4156,36 @@ function gasesteCilindri(opts){
     if(note) note.textContent=''; return;
   }
   const sp=+document.getElementById('spacing').value||0;
+  const brd=+document.getElementById('border').value||0;
   const P0=step.P0, unit=step.unit, needW=step.width;
+  // Pentru piesa A (auto) ROTIM piesa: pentru fiecare cilindru alegem unghiul care
+  // încape pe fața lui și dă cele mai multe buc/m. În Manual folosim tiparul fix.
+  const oris = (step.src==='auto') ? cilOrientations() : null;
 
   const rows=cilindri.map((c,idx)=>{
     const [serie,masina,Z,Lc,furn,obs]=c;
     const F=cilCirc(Z,Lc);
     const flag=cilFlag(obs);
     const faceW=cilFaceWidth(masina);           // 250 / 350 / ∞
-    const fitsW=(needW==null)||(needW<=faceW+1e-6);
-    const reps=Math.floor(F/P0+1e-9);           // câte perioade încap pe circumferință
-    const fitsLen=reps>=1;
-    let gap=null,pieces=0;
-    // pasul minim P0 = amprentă + distanță min. → amprenta = P0-sp;
-    // la pas uniform realP=F/reps, gap real = realP - (P0-sp) = F/reps - P0 + sp.
-    // Corect și pt. forme întrepătrunse (unde P0 < lățimea de gabarit).
-    if(fitsLen){ gap=F/reps-P0+sp; pieces=reps*unit; }
+    let fitsW,fitsLen,reps=0,gap=null,pieces=0,deg=null,needWloc=needW;
+    if(oris){
+      const r=cilBestOriForFace(oris,faceW,F,brd,sp,unit);
+      if(r.best){ fitsW=true; fitsLen=true; reps=r.best.reps; gap=r.best.gap; pieces=r.best.pieces; deg=r.best.deg; needWloc=r.best.width; }
+      else { fitsW=r.anyWidth; fitsLen=r.anyLen; needWloc=r.minWidth; }
+    } else {
+      fitsW=(needW==null)||(needW<=faceW+1e-6);
+      reps=Math.floor(F/P0+1e-9);
+      fitsLen=reps>=1;
+      if(fitsLen){ gap=F/reps-P0+sp; pieces=reps*unit; }
+    }
     const ok=fitsLen&&fitsW;
     let grp,reason='';
     if(flag==='distrus') grp=3;
     else if(!fitsLen){ grp=4; reason='len'; }
-    else if(!fitsW){ grp=4; reason='width'; }   // piesa e prea lată pentru fața cilindrului
+    else if(!fitsW){ grp=4; reason='width'; }   // prea lată pentru fața cilindrului chiar și rotită
     else if(flag==='probleme') grp=1;
     else grp=0;
-    return {idx,serie,masina,Z,F,furn,obs,flag,faceW,fitsW,reps,fitsLen,pieces,gap,ok,grp,reason};
+    return {idx,serie,masina,Z,F,furn,obs,flag,faceW,fitsW,reps,fitsLen,pieces,gap,ok,grp,reason,deg,needW:needWloc};
   });
   // Clasare după EFICIENȚĂ: gap real minim (= avans minim = cele mai multe piese
   // pe metru de material), NU după numărul de piese pe circumferință (care ar
@@ -4147,7 +4204,7 @@ function gasesteCilindri(opts){
 
   box.innerHTML =
     `<div style="font-size:10px;color:#7a9ab0;margin-bottom:5px">`+
-    `${step.label} · lățime necesară <b style="color:#c0d0e8">${cilFmt(needW,1)} mm</b> · distanță min. ${cilFmt(sp,1)} mm · <span style="color:#5ef0a0">clasat după eficiență (buc/m, gap minim)</span></div>`+
+    `${step.src==='auto' ? '🔄 Rotesc piesa automat la fiecare cilindru' : step.label} · distanță min. ${cilFmt(sp,1)} mm · <span style="color:#5ef0a0">clasat după eficiență (buc/m, gap minim)</span></div>`+
     rows.map(r=>{
       const isSel = (selF!=null && Math.abs(r.F-selF)<1e-6);
       let badge,cls='';
@@ -4165,10 +4222,11 @@ function gasesteCilindri(opts){
         : `—`;
       const nm = (r.serie||'(fără serie)');
       const revTxt = (r.reps>=1) ? ` · ${r.pieces} buc/rev` : '';
+      const oriTxt = (r.deg!=null) ? ` · la ${r.deg}°` : '';
       return `<div class="cil-row ${cls}" data-circ="${r.F}" data-label="${(nm+' · '+r.masina).replace(/"/g,'')}"`+
         (clickable?` onclick="aplicaCilindru(this)"`:'')+`>`+
         `<div class="cil-main"><div class="cil-name">${nm}</div>`+
-        `<div class="cil-sub">${r.masina} · Z${r.Z} · Ø ${cilFmt(r.F,1)} mm${revTxt} ${badge}</div></div>`+
+        `<div class="cil-sub">${r.masina} · Z${r.Z} · Ø ${cilFmt(r.F,1)} mm${revTxt}${oriTxt} ${badge}</div></div>`+
         `<div class="cil-metrics">${metrics}</div></div>`;
     }).join('');
 
